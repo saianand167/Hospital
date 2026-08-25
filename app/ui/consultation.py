@@ -1,11 +1,13 @@
 import streamlit as st
 import asyncio
 import json
+import hashlib
 from typing import Optional
 from app.services.history_service import HistoryService
 from app.clinical.question_engine import ClinicalQuestionEngine
 from app.models.history import ClinicalHistoryJSON
 from app.llm.client import LLMClient
+from app.asr.tts import TextToSpeechProvider
 
 def render_active_consultation():
     visit_id = st.session_state.get("active_visit_id")
@@ -121,52 +123,39 @@ def render_active_consultation():
         st.progress(curr / max(1, total))
         st.caption(f"📋 Question **{curr} of {total}** • Section: **{next_prompt.section.upper()}**")
 
-        # Question Prompt Card
-        st.markdown(f"""
-            <div style="background: #ffffff; border: 2px solid #0d9488; border-radius: 20px; padding: 24px; margin-bottom: 20px; box-shadow: 0 10px 15px -3px rgba(13, 148, 136, 0.08);">
-                <span style="color: #0d9488; font-weight: 800; font-size: 0.85rem; text-transform: uppercase;">Current Question</span>
-                <h2 style="margin: 6px 0 0 0; color: #0f172a; font-size: 1.5rem; font-weight: 800;">
-                    {next_prompt.prompt_text}
-                </h2>
-            </div>
-        """, unsafe_allow_html=True)
+        # Question Card
+        col_q, col_audio_btn = st.columns([5, 1])
+        with col_q:
+            st.markdown(f"""
+                <div style="background: #ffffff; border: 2px solid #0d9488; border-radius: 20px; padding: 22px; margin-bottom: 16px; box-shadow: 0 10px 15px -3px rgba(13, 148, 136, 0.08);">
+                    <span style="color: #0d9488; font-weight: 800; font-size: 0.85rem; text-transform: uppercase;">Current Question</span>
+                    <h2 style="margin: 6px 0 0 0; color: #0f172a; font-size: 1.45rem; font-weight: 800;">
+                        {next_prompt.prompt_text}
+                    </h2>
+                </div>
+            """, unsafe_allow_html=True)
+        
+        with col_audio_btn:
+            # Question TTS Speaker Button
+            if st.button("🔊 Listen", key=f"btn_tts_{curr}", use_container_width=True, help="Listen to the question"):
+                with st.spinner("Speaking..."):
+                    audio_bytes = asyncio.run(TextToSpeechProvider.synthesize(next_prompt.prompt_text, language=history.language))
+                    if audio_bytes:
+                        st.audio(audio_bytes, format="audio/mp3", autoplay=True)
 
         target_field = next_prompt.field_name
         question_text = next_prompt.prompt_text
         options = next_prompt.options
         input_type = next_prompt.input_type
 
-        # ---------------- INPUT MODES ----------------
-        
-        # 1. Pending Voice Confirmation Sub-Flow
-        if st.session_state.get("pending_audio_transcript"):
-            trans = st.session_state.pending_audio_transcript
-            st.markdown(f"""
-                <div style="background:#f0fdfa; border:2px dashed #0d9488; border-radius:16px; padding:18px; margin-bottom:16px;">
-                    <span style="font-size:0.85rem; font-weight:800; color:#0f766e; text-transform:uppercase;">Recognized Voice Transcript:</span>
-                    <h3 style="margin:6px 0 0 0; color:#134e4a; font-size:1.3rem;">"{trans}"</h3>
-                </div>
-            """, unsafe_allow_html=True)
-            
-            c1, c2 = st.columns(2)
-            with c1:
-                if st.button("✅ Use This Answer", key="confirm_transcript", use_container_width=True):
-                    asyncio.run(HistoryService.process_message(
-                        visit_id=visit_id,
-                        patient_message=trans,
-                        target_field=target_field,
-                        question_text=question_text,
-                        input_mode="voice"
-                    ))
-                    st.session_state.pending_audio_transcript = None
-                    st.rerun()
-            with c2:
-                if st.button("🔄 Record Again", key="re_record", use_container_width=True):
-                    st.session_state.pending_audio_transcript = None
-                    st.rerun()
-            return
+        input_key = f"ans_text_val_{curr}"
+        audio_hash_key = f"audio_processed_hash_{curr}"
+        if input_key not in st.session_state:
+            st.session_state[input_key] = ""
 
-        # 2. Touchscreen Options (Direct selection)
+        # ---------------- INPUT MODES ----------------
+
+        # 1. Touchscreen Options (Direct selection)
         if options:
             st.markdown("##### 👆 Touch an Option:")
             cols = st.columns(min(len(options), 4))
@@ -182,9 +171,10 @@ def render_active_consultation():
                             question_text=question_text,
                             input_mode="touch"
                         ))
+                        st.session_state[input_key] = ""
                         st.rerun()
 
-        # 3. Pain Scale Slider
+        # 2. Pain Scale Slider
         if input_type == "scale":
             st.markdown("##### 🔢 Select Pain Scale Rating (0 to 10):")
             scale_val = st.slider("Severity Scale", 0, 10, 5, step=1, key="scale_slider")
@@ -198,38 +188,62 @@ def render_active_consultation():
                     question_text=question_text,
                     input_mode="touch"
                 ))
+                st.session_state[input_key] = ""
                 st.rerun()
 
-        # 4. Live Microphone Recording Input
-        st.markdown("##### 🎤 Speak Your Answer (Live Microphone):")
+        # 3. Live Microphone Recording Input (Local faster-whisper)
+        st.markdown("##### 🎤 Speak Your Answer (Voice AI):")
         try:
-            audio_data = st.audio_input("Click microphone to record live speech", key=f"mic_{curr}")
+            audio_data = st.audio_input("Record speech with microphone", key=f"mic_{curr}")
             if audio_data is not None:
                 audio_bytes = audio_data.read()
-                transcribed_text = asyncio.run(HistoryService._asr_provider.transcribe(audio_bytes, language=history.language))
-                if transcribed_text:
-                    st.session_state.pending_audio_transcript = transcribed_text
-                    st.rerun()
+                if audio_bytes and len(audio_bytes) > 50:
+                    curr_hash = hashlib.md5(audio_bytes).hexdigest()
+                    if st.session_state.get(audio_hash_key) != curr_hash:
+                        with st.spinner("🎙️ Transcribing voice in real-time..."):
+                            transcribed_text = asyncio.run(HistoryService._asr_provider.transcribe(audio_bytes, language=history.language))
+                        if transcribed_text:
+                            st.session_state[input_key] = transcribed_text
+                            st.session_state[audio_hash_key] = curr_hash
+                            st.rerun()
         except AttributeError:
-            st.info("Browser microphone active. You can also type or use touch options.")
+            st.info("Browser microphone active.")
 
-        # 5. Text Input Form
-        st.markdown("##### ⌨ Type Your Answer:")
-        with st.form(key=f"text_form_{curr}", clear_on_submit=True):
+        # 4. Answer Input Box (Voice Transcript or Typed)
+        st.markdown("##### ⌨ Answer (Voice Transcript / Typed Response):")
+        
+        # Display badge if recognized from voice
+        if st.session_state.get(input_key):
+            st.info(f"🎙️ Recognized Voice: **\"{st.session_state[input_key]}\"** — Click *Submit Answer* to proceed or edit below.")
+
+        with st.form(key=f"text_form_{curr}", clear_on_submit=False):
             user_text = st.text_input(
-                "Answer",
-                placeholder="e.g. I am getting loose motions since yesterday / నాకు రెండు రోజులుగా మోషన్స్ అవుతున్నాయి",
+                "Your Answer",
+                value=st.session_state.get(input_key, ""),
+                placeholder="Transcribed voice will appear here, or type your answer...",
                 label_visibility="collapsed"
             )
-            submit_btn = st.form_submit_button("Submit Answer ➔", use_container_width=True)
+            
+            c_sub, c_clr = st.columns([3, 1])
+            with c_sub:
+                submit_btn = st.form_submit_button("Submit Answer ➔", use_container_width=True, type="primary")
+            with c_clr:
+                clear_btn = st.form_submit_button("Clear", use_container_width=True)
+
+            if clear_btn:
+                st.session_state[input_key] = ""
+                st.rerun()
+
             if submit_btn and user_text.strip():
-                asyncio.run(HistoryService.process_message(
-                    visit_id=visit_id,
-                    patient_message=user_text.strip(),
-                    target_field=target_field,
-                    question_text=question_text,
-                    input_mode="text"
-                ))
+                with st.spinner("Processing clinical response..."):
+                    asyncio.run(HistoryService.process_message(
+                        visit_id=visit_id,
+                        patient_message=user_text.strip(),
+                        target_field=target_field,
+                        question_text=question_text,
+                        input_mode="voice" if st.session_state.get(audio_hash_key) else "text"
+                    ))
+                st.session_state[input_key] = ""
                 st.rerun()
 
     # ---------------- COMPLETED STATE ----------------
@@ -248,21 +262,23 @@ def render_active_consultation():
         with c3:
             st.metric("Severity", f"{hpi.severity}/10" if hpi.severity is not None else "N/A")
         with c4:
-            st.metric("Triage Priority", triage.flag)
+            t_color = "red" if triage.flag == "RED" else "orange" if triage.flag == "YELLOW" else "green"
+            st.markdown(f"**Triage Flag**<br><span style='color:{t_color}; font-weight:800; font-size:1.4rem;'>● {triage.flag}</span>", unsafe_allow_html=True)
 
-        with st.expander("🔍 View Official Part 1 Clinical History JSON Contract (For Part 3 Integration)", expanded=True):
+        st.divider()
+        
+        # Display Clinical JSON Payload
+        with st.expander("🔍 View Complete Clinical History JSON (SIH26047 Standard)", expanded=True):
             st.json(history.model_dump())
 
-        b1, b2 = st.columns(2)
-        with b1:
-            st.download_button(
-                "📥 Download Official History JSON",
-                data=json.dumps(history.model_dump(), indent=2, ensure_ascii=False),
-                file_name=f"clinical_history_{visit_id}.json",
-                mime="application/json",
-                use_container_width=True
-            )
-        with b2:
-            if st.button("⬅ Return to Patient Dashboard", use_container_width=True):
+        # Action Buttons
+        col_a1, col_a2 = st.columns(2)
+        with col_a1:
+            if st.button("🔄 Start Another Consultation", use_container_width=True):
+                st.session_state.active_visit_id = None
+                st.session_state.current_screen = "dashboard"
+                st.rerun()
+        with col_a2:
+            if st.button("📊 Return to Patient Dashboard", use_container_width=True):
                 st.session_state.current_screen = "dashboard"
                 st.rerun()

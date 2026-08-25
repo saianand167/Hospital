@@ -40,6 +40,8 @@ app.include_router(session_router)
 def on_startup():
     init_db()
     SymptomLoader.load_all()
+    from app.asr.indic_asr import IndicASR
+    IndicASR.preload()
 
 if __name__ == "__main__":
     uvicorn.run("app.main:app", host="0.0.0.0", port=8001, reload=True)

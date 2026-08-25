@@ -37,11 +37,15 @@ class IndicASR(ASRProvider):
                 if cls._model_instance is None:
                     try:
                         from faster_whisper import WhisperModel
-                        logger.info(f"Loading local faster-whisper model '{model_size}' (device={device}, compute_type={compute_type})...")
+                        logger.info(f"Loading local faster-whisper model '{model_size}' (device={device}, compute_type={compute_type}, cpu_threads=4)...")
+                        
+                        # Set device & compute type
+                        actual_device = "cpu" if device in ["auto", "cpu"] else device
                         cls._model_instance = WhisperModel(
                             model_size,
-                            device=device,
-                            compute_type=compute_type
+                            device=actual_device,
+                            compute_type=compute_type,
+                            cpu_threads=4
                         )
                         logger.info(f"Local faster-whisper model '{model_size}' loaded successfully.")
                     except Exception as e:
@@ -49,11 +53,17 @@ class IndicASR(ASRProvider):
                         cls._model_instance = None
         return cls._model_instance
 
+    @classmethod
+    def preload(cls):
+        """Warm up the model asynchronously so user requests are fast."""
+        t = threading.Thread(target=cls._get_model, daemon=True)
+        t.start()
+
     async def transcribe(self, audio_bytes: bytes, language: str = "en") -> str:
         """
         Transcribes raw audio bytes (WAV/WebM/MP3/OGG) to text using local faster-whisper.
         """
-        if not audio_bytes or len(audio_bytes) < 100:
+        if not audio_bytes or len(audio_bytes) < 50:
             return ""
 
         # If MOCK_MODE is enabled, return predictable clinical mock utterance
@@ -83,9 +93,10 @@ class IndicASR(ASRProvider):
             segments, info = model.transcribe(
                 audio_stream,
                 language=lang_code,
-                beam_size=5,
-                vad_filter=True,  # Filter out silence & background hospital noises
-                vad_parameters=dict(min_silence_duration_ms=500)
+                beam_size=3,        # Fast beam size for low latency
+                best_of=3,
+                vad_filter=True,    # Filter out silence & background hospital noises
+                vad_parameters=dict(min_silence_duration_ms=400)
             )
 
             text_segments = [segment.text.strip() for segment in segments]

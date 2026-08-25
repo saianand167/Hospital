@@ -12,6 +12,12 @@ from app.ui.login import render_login_screen
 from app.ui.dashboard import render_dashboard
 from app.ui.consultation import render_active_consultation
 from app.services.consultation_service import ConsultationService
+from app.asr.indic_asr import IndicASR
+
+# Pre-warm local speech recognition model in background
+if "asr_preloaded" not in st.session_state:
+    st.session_state.asr_preloaded = True
+    IndicASR.preload()
 
 st.set_page_config(
     page_title="MediKiosk - Clinical History Intake",
