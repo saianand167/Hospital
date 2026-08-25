@@ -17,14 +17,22 @@ def detect_audio_mime(audio_bytes: bytes) -> Tuple[str, str]:
         return "patient_voice.mp3", "audio/mp3"
     elif b"ftyp" in audio_bytes[:16]:
         return "patient_voice.mp4", "audio/mp4"
-    # Default to webm as Streamlit standard
     return "patient_voice.webm", "audio/webm"
+
+# Unified multilingual clinical vocabulary hint allowing seamless cross-language switching
+MULTILINGUAL_CLINICAL_PROMPT = (
+    "Hospital patient consultation. Common symptoms: "
+    "గుండె నొప్పి, ఎడమ వైపు నొప్పి, కడుపు నొప్పి, దగ్గు, జ్వరం, మోషన్స్, గ్యాస్, వాంతులు, "
+    "सीने में दर्द, बाईं तरफ दर्द, पेट दर्द, बुखार, खांसी, उल्टी, दस्त, चक्कर, "
+    "chest pain on left side, severe abdominal pain, high fever, duration days, scale rating."
+)
 
 class IndicASR(ASRProvider):
     """
-    State-of-the-Art Multilingual ASR Engine with Zero-Hallucination Guardrails.
-    Primary: Groq Cloud Whisper-Large-v3-Turbo (Sub-second response, precise Telugu, Hindi & English)
-    Fallback: Local faster-whisper with strict VAD & temperature=0.0.
+    Ultra-Fast Multilingual ASR Engine with Cross-Language Auto-Detection.
+    Allows speaking in Telugu, Hindi, English, or mixed languages at any time.
+    Primary: Groq Cloud Whisper-Large-v3-Turbo (~0.2s latency, high accuracy)
+    Fallback: Local faster-whisper.
     """
     _local_model_instance = None
     _lock = threading.Lock()
@@ -86,9 +94,10 @@ class IndicASR(ASRProvider):
 
     async def transcribe(self, audio_bytes: bytes, language: str = "en") -> str:
         """
-        Transcribes audio bytes with maximum accuracy and high speed.
+        Transcribes audio bytes with automatic language detection and lightning speed.
+        Patients can speak in Telugu, Hindi, English, or switch languages freely.
         """
-        if not audio_bytes or len(audio_bytes) < 200:
+        if not audio_bytes or len(audio_bytes) < 150:
             return ""
 
         if settings.MOCK_MODE:
@@ -99,46 +108,48 @@ class IndicASR(ASRProvider):
                 return "मुझे चार दिनों से सीने में बाईं तरफ दर्द है"
             return "I have had chest pain on the left side for four days"
 
-        lang_code = language if language in ["en", "te", "hi", "ta", "kn", "ml", "mr", "bn", "gu", "pa", "ur"] else "en"
         filename, mime_type = detect_audio_mime(audio_bytes)
 
-        # 1. Primary Engine: Groq Whisper-Large-v3 (Fastest & accurate for Telugu & Hindi)
+        # 1. Primary Engine: Groq Whisper-Large-v3-Turbo (Ultra-fast ~0.3s, Auto-Language Detection)
         groq_client = self._get_groq_client()
         if groq_client:
             try:
-                logger.info(f"Invoking Groq Whisper-Large-v3 (lang={lang_code}, mime={mime_type}, bytes={len(audio_bytes)})...")
+                logger.info(f"Invoking Groq Whisper-Large-v3-Turbo (Auto-Detect, mime={mime_type}, bytes={len(audio_bytes)})...")
+                
+                # Note: Not restricting language code allows auto-detecting Telugu, Hindi, English, etc.
                 transcription = groq_client.audio.transcriptions.create(
                     file=(filename, audio_bytes, mime_type),
-                    model="whisper-large-v3",
-                    language=lang_code,
+                    model="whisper-large-v3-turbo",
+                    prompt=MULTILINGUAL_CLINICAL_PROMPT,
                     response_format="text",
                     temperature=0.0
                 )
                 
                 result = str(transcription).strip() if transcription else ""
                 
-                # Check for repetitive garbage / hallucination strings
                 if result and not self._is_hallucination(result):
-                    logger.info(f"Groq Whisper-Large-v3 success ({lang_code}): '{result}'")
+                    logger.info(f"Groq Whisper-Turbo transcription success: '{result}'")
                     return result
             except Exception as e:
-                logger.warning(f"Groq Whisper API error, using local engine: {e}")
+                logger.warning(f"Groq Whisper Turbo error, falling back: {e}")
 
-        # 2. Fallback Engine: Local faster-whisper
+        # 2. Fallback Engine: Local faster-whisper (Auto-detecting language)
         try:
-            logger.info(f"Running local faster-whisper fallback (lang={lang_code})...")
+            logger.info("Running local faster-whisper fallback...")
             model = self._get_local_model(self.model_size, self.device, self.compute_type)
             if not model:
                 return ""
 
             audio_stream = io.BytesIO(audio_bytes)
+            # language=None triggers automatic language identification
             segments, info = model.transcribe(
                 audio_stream,
-                language=lang_code,
+                language=None,
+                initial_prompt=MULTILINGUAL_CLINICAL_PROMPT,
                 temperature=0.0,
-                beam_size=5,
+                beam_size=3,
                 vad_filter=True,
-                vad_parameters=dict(min_silence_duration_ms=400)
+                vad_parameters=dict(min_silence_duration_ms=300)
             )
 
             text_segments = [s.text.strip() for s in segments]
@@ -147,7 +158,7 @@ class IndicASR(ASRProvider):
             if self._is_hallucination(result):
                 return ""
 
-            logger.info(f"Local faster-whisper success ({lang_code}): '{result}'")
+            logger.info(f"Local faster-whisper detected '{info.language}' ({info.language_probability:.2f}): '{result}'")
             return result
 
         except Exception as e:
@@ -157,7 +168,7 @@ class IndicASR(ASRProvider):
     @staticmethod
     def _is_hallucination(text: str) -> bool:
         """Filter out common Whisper silence hallucination patterns."""
-        if not text:
+        if not text or len(text.strip()) == 0:
             return True
         # Check repeated character clusters (e.g. "నింనిందింనించి")
         if len(text) > 10 and len(set(text)) < 5:
