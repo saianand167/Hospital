@@ -6,7 +6,7 @@ def render_dashboard():
     user = st.session_state.get("user", {})
     user_id = user.get("user_id", "USR-000001")
     full_name = user.get("full_name", "Patient")
-    lang = user.get("preferred_language", "en")
+    preferred_lang = user.get("preferred_language", "en")
 
     # Header Card
     st.markdown(f"""
@@ -23,27 +23,43 @@ def render_dashboard():
         </div>
     """, unsafe_allow_html=True)
 
-    # Action Buttons
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        if st.button("🚀 Start New Consultation", use_container_width=True):
-            # Start fresh consultation session
-            history, next_q = HistoryService.start_session(
-                user_id=user_id,
-                language=lang
-            )
-            st.session_state.active_visit_id = history.visit_id
-            st.session_state.current_screen = "active_consultation"
-            st.session_state.pending_audio_transcript = None
-            st.rerun()
+    # Language Choice Card for New Consultation
+    st.markdown("""
+        <div style="background: #ffffff; border: 2px solid #0d9488; border-radius: 18px; padding: 20px; margin-bottom: 20px;">
+            <div style="font-size: 0.85rem; font-weight: 800; color: #0d9488; text-transform: uppercase;">
+                Step 1: Choose Consultation Language / భాషను ఎంచుకోండి / भाषा चुनें
+            </div>
+            <h3 style="margin: 6px 0 12px 0; color: #0f172a; font-size: 1.25rem; font-weight: 800;">
+                Which language do you want to continue with?
+            </h3>
+        </div>
+    """, unsafe_allow_html=True)
 
-    with col2:
-        if st.button("📋 My Consultations", use_container_width=True):
+    # Big 3-Column Language Launchers
+    col_en, col_te, col_hi = st.columns(3)
+
+    with col_en:
+        if st.button("🇬🇧 **English**\n\nStart in English", key="btn_start_en", use_container_width=True):
+            _start_consultation(user_id, "en")
+
+    with col_te:
+        if st.button("🇮🇳 **తెలుగు (Telugu)**\n\nతెలుగులో ప్రారంభించండి", key="btn_start_te", use_container_width=True):
+            _start_consultation(user_id, "te")
+
+    with col_hi:
+        if st.button("🇮🇳 **हिन्दी (Hindi)**\n\nहिन्दी में शुरू करें", key="btn_start_hi", use_container_width=True):
+            _start_consultation(user_id, "hi")
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # Navigation Actions
+    col_nav1, col_nav2 = st.columns(2)
+    with col_nav1:
+        if st.button("📋 View My Consultations History", use_container_width=True):
             st.session_state.current_screen = "consultation_history"
             st.rerun()
-
-    with col3:
-        if st.button("🚪 Logout", use_container_width=True):
+    with col_nav2:
+        if st.button("🚪 Sign Out", use_container_width=True):
             st.session_state.authenticated = False
             st.session_state.user = None
             st.session_state.current_screen = "login"
@@ -56,17 +72,18 @@ def render_dashboard():
     consultations = ConsultationService.get_user_consultations(user_id)
 
     if not consultations:
-        st.info("No prior consultations found. Click **'Start New Consultation'** above to begin your intake.")
+        st.info("No prior consultations found. Select a language above to begin your intake.")
     else:
         for c in consultations[:3]:
             flag_color = "#10b981" if c.triage_flag == "GREEN" else "#f59e0b" if c.triage_flag == "YELLOW" else "#e11d48"
+            lang_label = "Telugu (తెలుగు)" if c.language == "te" else "Hindi (हिन्दी)" if c.language == "hi" else "English"
             st.markdown(f"""
                 <div style="background: white; border: 1px solid #e2e8f0; border-radius: 16px; padding: 16px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
                     <div>
                         <span style="font-weight: 800; color: #0f172a; font-size: 1.05rem;">{c.visit_id}</span>
                         <span style="color: #64748b; font-size: 0.85rem; margin-left: 8px;">({c.started_at})</span>
                         <div style="color: #334155; font-size: 0.95rem; margin-top: 4px;">
-                            Complaint: <b>{(c.current_complaint or 'General Intake').title()}</b>
+                            Complaint: <b>{(c.current_complaint or 'General Intake').title()}</b> • Language: <b>{lang_label}</b>
                         </div>
                     </div>
                     <div style="text-align: right;">
@@ -79,3 +96,13 @@ def render_dashboard():
                     </div>
                 </div>
             """, unsafe_allow_html=True)
+
+def _start_consultation(user_id: str, lang: str):
+    history, next_q = HistoryService.start_session(
+        user_id=user_id,
+        language=lang
+    )
+    st.session_state.active_visit_id = history.visit_id
+    st.session_state.current_screen = "active_consultation"
+    st.session_state.pending_audio_transcript = None
+    st.rerun()
