@@ -1,0 +1,107 @@
+symptom: abdominal_pain
+canonical_names:
+  - abdominal pain
+  - stomach pain
+  - belly pain
+  - కడుపు నొప్పి
+  - కడుపులో నొప్పి
+  - पेट दर्द
+  - पेट में दर्द
+
+questions:
+  - field_name: duration_days
+    section: hpi
+    priority: 1
+    required: true
+    input_type: number
+    min_val: 0
+    max_val: 180
+    question:
+      en: "How many days have you had this stomach pain?"
+      te: "మీకు కడుపు నొప్పి ఎన్ని రోజులుగా ఉంది?"
+      hi: "आपको पेट में दर्द कितने दिनों से है?"
+
+  - field_name: location
+    section: hpi
+    priority: 2
+    required: true
+    input_type: single_choice
+    question:
+      en: "Where exactly is the stomach pain located?"
+      te: "కడుపు నొప్పి ఖచ్చితంగా ఎక్కడ ఉంది?"
+      hi: "दर्द पेट में ठीक किस जगह पर है?"
+    options:
+      - value: "right lower"
+        label:
+          en: "Right Lower Side"
+          te: "కుడి వైపు క్రింద (Right Lower)"
+          hi: "दाईं तरफ नीचे (Right Lower)"
+      - value: "upper"
+        label:
+          en: "Upper Stomach / Epigastric"
+          te: "కడుపు పైభాగంలో (Upper)"
+          hi: "पेट के ऊपरी हिस्से में (Upper)"
+      - value: "left lower"
+        label:
+          en: "Left Lower Side"
+          te: "ఎడమ వైపు క్రింద (Left Lower)"
+          hi: "बाईं तरफ नीचे (Left Lower)"
+      - value: "all over"
+        label:
+          en: "All over abdomen"
+          te: "కడుపు అంతటా"
+          hi: "पूरे पेट में"
+
+  - field_name: severity
+    section: hpi
+    priority: 3
+    required: true
+    input_type: scale
+    min_val: 0
+    max_val: 10
+    question:
+      en: "How severe is the stomach pain from 0 to 10?"
+      te: "కడుపు నొప్పి తీవ్రత 0 నుండి 10 వరకు ఎంత?"
+      hi: "0 से 10 के पैमाने पर पेट दर्द कितना गंभीर है?"
+
+  - field_name: vomiting
+    section: hpi
+    priority: 4
+    required: true
+    input_type: yes_no
+    question:
+      en: "Are you experiencing vomiting or nausea?"
+      te: "మీకు వాంతులు లేదా వికారం అవుతున్నాయా?"
+      hi: "क्या आपको उल्टी या जी मिचलाने की समस्या है?"
+    options:
+      - value: "true"
+        label:
+          en: "YES"
+          te: "అవును (Yes)"
+          hi: "हाँ (Yes)"
+      - value: "false"
+        label:
+          en: "NO"
+          te: "లేదు (No)"
+          hi: "नहीं (No)"
+
+  - field_name: fever
+    section: hpi
+    priority: 5
+    required: true
+    input_type: yes_no
+    question:
+      en: "Do you have fever along with the stomach pain?"
+      te: "కడుపు నొప్పితో పాటు జ్వరం కూడా ఉందా?"
+      hi: "क्या पेट दर्द के साथ बुखार भी है?"
+    options:
+      - value: "true"
+        label:
+          en: "YES"
+          te: "అవును (Yes)"
+          hi: "हाँ (Yes)"
+      - value: "false"
+        label:
+          en: "NO"
+          te: "లేదు (No)"
+          hi: "नहीं (No)"

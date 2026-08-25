@@ -1,0 +1,59 @@
+{
+  "patient_id": "PAT-0001",
+  "visit_id": "VIS-0001",
+  "language": "te",
+  "chief_complaint": {
+    "text": "chest pain",
+    "canonical": "chest_pain"
+  },
+  "hpi": {
+    "duration_days": 4,
+    "location": "left",
+    "severity": 7,
+    "character": "pressure",
+    "radiation": "left arm",
+    "aggravating_factors": [],
+    "relieving_factors": [],
+    "breathlessness": true,
+    "sweating": true,
+    "nausea": null,
+    "dizziness": null,
+    "fever": null,
+    "cough": null
+  },
+  "past_history": [
+    "diabetes"
+  ],
+  "past_surgical_history": [],
+  "medications": [
+    "bp_sugar_meds"
+  ],
+  "allergies": [
+    "none"
+  ],
+  "family_history": [],
+  "personal_history": {},
+  "review_of_systems": {},
+  "triage": {
+    "flag": "RED",
+    "priority": true,
+    "reason_codes": [
+      "CHEST_PAIN_WITH_BREATHLESSNESS",
+      "SEVERE_CHEST_PAIN_WITH_AUTONOMIC_FEATURES"
+    ],
+    "triggering_parameters": {
+      "chief_complaint": "chest pain",
+      "breathlessness": true,
+      "severity": 7,
+      "sweating": true,
+      "radiation": "left arm"
+    },
+    "evaluated_at": "2026-08-24T22:49:12.311659",
+    "recommendation": "Priority clinical attention required. Alert triage nursing staff immediately."
+  },
+  "metadata": {
+    "completed": true,
+    "created_at": "2026-08-24T22:49:12.311659",
+    "engine_version": "1.0"
+  }
+}

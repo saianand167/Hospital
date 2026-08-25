@@ -1,0 +1,190 @@
+symptom: chest_pain
+canonical_names:
+  - chest pain
+  - chest tightness
+  - chest pressure
+  - గుండె నొప్పి
+  - ఛాతి నొప్పి
+  - छाती में दर्द
+  - सीने में दर्द
+
+questions:
+  - field_name: duration_days
+    section: hpi
+    priority: 1
+    required: true
+    input_type: number
+    min_val: 0
+    max_val: 365
+    question:
+      en: "How many days have you had this chest pain?"
+      te: "మీకు ఈ ఛాతి నొప్పి ఎన్ని రోజులుగా ఉంది?"
+      hi: "आपको यह सीने में दर्द कितने दिनों से है?"
+
+  - field_name: location
+    section: hpi
+    priority: 2
+    required: true
+    input_type: single_choice
+    question:
+      en: "Where exactly is the chest pain located?"
+      te: "నొప్పి ఛాతిలో ఖచ్చితంగా ఎక్కడ ఉంది?"
+      hi: "दर्द सीने में ठीक किस जगह पर है?"
+    options:
+      - value: "left"
+        label:
+          en: "Left Side"
+          te: "ఎడమ వైపు (Left)"
+          hi: "बाईं तरफ (Left)"
+      - value: "center"
+        label:
+          en: "Center (Middle)"
+          te: "మధ్యలో (Center)"
+          hi: "बीच में (Center)"
+      - value: "right"
+        label:
+          en: "Right Side"
+          te: "కుడి వైపు (Right)"
+          hi: "दाईं तरफ (Right)"
+      - value: "diffuse"
+        label:
+          en: "All over chest"
+          te: "ఛాతి అంతటా"
+          hi: "पूरे सीने में"
+
+  - field_name: severity
+    section: hpi
+    priority: 3
+    required: true
+    input_type: scale
+    min_val: 0
+    max_val: 10
+    question:
+      en: "How severe is the pain on a scale from 0 to 10?"
+      te: "నొప్పి తీవ్రత 0 నుండి 10 వరకు ఎంత ఉంది?"
+      hi: "0 से 10 के पैमाने पर दर्द कितना गंभीर है?"
+
+  - field_name: character
+    section: hpi
+    priority: 4
+    required: false
+    input_type: single_choice
+    question:
+      en: "What type of pain do you feel?"
+      te: "నొప్పి ఎలా అనిపిస్తుంది?"
+      hi: "दर्द किस प्रकार का महसूस होता है?"
+    options:
+      - value: "pressure"
+        label:
+          en: "Heavy pressure / Squeezing"
+          te: "భారంగా / నొక్కినట్లు (Pressure)"
+          hi: "दबाव / भारीपन (Pressure)"
+      - value: "sharp"
+        label:
+          en: "Sharp / Stabbing"
+          te: "గుచ్చుకున్నట్లు (Sharp)"
+          hi: "चुभने वाला (Sharp)"
+      - value: "burning"
+        label:
+          en: "Burning sensation"
+          te: "మంటగా (Burning)"
+          hi: "जलन जैसा (Burning)"
+      - value: "dull"
+        label:
+          en: "Dull ache"
+          te: "సన్నని నొప్పి (Dull)"
+          hi: "हल्का दर्द (Dull)"
+
+  - field_name: radiation
+    section: hpi
+    priority: 5
+    required: true
+    input_type: single_choice
+    question:
+      en: "Does the pain spread or travel to your arm, neck, or jaw?"
+      te: "నొప్పి మీ ఎడమ చేయి, మెడ లేదా దవడ వైపు వ్యాపిస్తుందా?"
+      hi: "क्या दर्द आपके हाथ, गर्दन या जबड़े तक फैलता है?"
+    options:
+      - value: "left arm"
+        label:
+          en: "Left Arm"
+          te: "ఎడమ చేయి (Left Arm)"
+          hi: "बायां हाथ (Left Arm)"
+      - value: "neck / jaw"
+        label:
+          en: "Neck or Jaw"
+          te: "మెడ లేదా దవడ"
+          hi: "गर्दन या जबड़ा"
+      - value: "back"
+        label:
+          en: "Back / Shoulder blade"
+          te: "వీపు / భుజం"
+          hi: "पीठ / कंधा"
+      - value: "none"
+        label:
+          en: "No spreading"
+          te: "ఎక్కడికీ వ్యాపించట్లేదు"
+          hi: "कहीं नहीं फैलता"
+
+  - field_name: breathlessness
+    section: hpi
+    priority: 6
+    required: true
+    input_type: yes_no
+    question:
+      en: "Are you experiencing difficulty in breathing or shortness of breath?"
+      te: "మీకు ఊపిరి తీసుకోవడంలో ఇబ్బంది లేదా ఆయాసం ఉందా?"
+      hi: "क्या आपको सांस लेने में तकलीफ या घबराहट हो रही है?"
+    options:
+      - value: "true"
+        label:
+          en: "YES"
+          te: "అవును (Yes)"
+          hi: "हाँ (Yes)"
+      - value: "false"
+        label:
+          en: "NO"
+          te: "లేదు (No)"
+          hi: "नहीं (No)"
+
+  - field_name: sweating
+    section: hpi
+    priority: 7
+    required: true
+    input_type: yes_no
+    question:
+      en: "Are you sweating excessively or feeling cold and clammy?"
+      te: "మీకు అధికంగా చెమటలు పడుతున్నాయా?"
+      hi: "क्या आपको बहुत अधिक पसीना आ रहा है?"
+    options:
+      - value: "true"
+        label:
+          en: "YES"
+          te: "అవును (Yes)"
+          hi: "हाँ (Yes)"
+      - value: "false"
+        label:
+          en: "NO"
+          te: "లేదు (No)"
+          hi: "नहीं (No)"
+
+  - field_name: dizziness
+    section: hpi
+    priority: 8
+    required: false
+    input_type: yes_no
+    question:
+      en: "Do you feel lightheaded, dizzy, or like fainting?"
+      te: "మీకు తల తిరుగుతున్నట్లు లేదా మూర్ఛపోయేలా ఉందా?"
+      hi: "क्या आपको चक्कर आ रहा है या बेहोशी जैसी लग रही है?"
+    options:
+      - value: "true"
+        label:
+          en: "YES"
+          te: "అవును (Yes)"
+          hi: "हाँ (Yes)"
+      - value: "false"
+        label:
+          en: "NO"
+          te: "లేదు (No)"
+          hi: "नहीं (No)"

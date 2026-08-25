@@ -1,0 +1,135 @@
+symptom: diarrhea
+canonical_names:
+  - diarrhea
+  - loose motions
+  - motions
+  - loose stools
+  - విరేచనాలు
+  - మోషన్స్
+  - దస్తీలు
+  - दस्त
+  - लूज मोशन
+  - पेट खराब
+
+questions:
+  - field_name: duration_days
+    section: hpi
+    priority: 1
+    required: true
+    input_type: number
+    min_val: 0
+    max_val: 60
+    question:
+      en: "How many days have you been having loose motions?"
+      te: "మీకు ఎన్ని రోజులుగా విరేచనాలు (motions) అవుతున్నాయి?"
+      hi: "आपको कितने दिनों से दस्त (लूज मोशन) की समस्या है?"
+
+  - field_name: frequency_per_day
+    section: hpi
+    priority: 2
+    required: true
+    input_type: single_choice
+    question:
+      en: "How many times per day are you having loose motions?"
+      te: "రోజుకు ఎన్ని సార్లు మోషన్స్ అవుతున్నాయి?"
+      hi: "दिन में कितनी बार दस्त हो रहे हैं?"
+    options:
+      - value: "1-3"
+        label:
+          en: "1 to 3 times"
+          te: "1 నుండి 3 సార్లు"
+          hi: "1 से 3 बार"
+      - value: "4-6"
+        label:
+          en: "4 to 6 times"
+          te: "4 నుండి 6 సార్లు"
+          hi: "4 से 6 बार"
+      - value: "more than 6"
+        label:
+          en: "More than 6 times (Frequent)"
+          te: "6 కంటే ఎక్కువ సార్లు (తరచుగా)"
+          hi: "6 से अधिक बार (लगातार)"
+
+  - field_name: blood_in_stool
+    section: hpi
+    priority: 3
+    required: true
+    input_type: yes_no
+    question:
+      en: "Is there any blood or mucus in your stool?"
+      te: "మలంలో రక్తం లేదా జిగట పడుతుందా?"
+      hi: "क्या दस्त में खून या आंव आ रहा है?"
+    options:
+      - value: "true"
+        label:
+          en: "YES"
+          te: "అవును (Yes)"
+          hi: "हाँ (Yes)"
+      - value: "false"
+        label:
+          en: "NO"
+          te: "లేదు (No)"
+          hi: "नहीं (No)"
+
+  - field_name: dehydration_dizziness
+    section: hpi
+    priority: 4
+    required: true
+    input_type: yes_no
+    question:
+      en: "Are you feeling severe thirst, extreme weakness, or dizziness?"
+      te: "మీకు విపరీతమైన దాహం, నీరసం లేదా కళ్ళు తిరగడం ఉందా?"
+      hi: "क्या बहुत अधिक प्यास, कमजोरी या चक्कर आ रहा है?"
+    options:
+      - value: "true"
+        label:
+          en: "YES"
+          te: "అవును (Yes)"
+          hi: "हाँ (Yes)"
+      - value: "false"
+        label:
+          en: "NO"
+          te: "లేదు (No)"
+          hi: "नहीं (No)"
+
+  - field_name: vomiting
+    section: hpi
+    priority: 5
+    required: true
+    input_type: yes_no
+    question:
+      en: "Are you also experiencing vomiting or nausea?"
+      te: "వాంతులు లేదా వికారంగా కూడా ఉందా?"
+      hi: "क्या आपको उल्टी भी हो रही है?"
+    options:
+      - value: "true"
+        label:
+          en: "YES"
+          te: "అవును (Yes)"
+          hi: "हाँ (Yes)"
+      - value: "false"
+        label:
+          en: "NO"
+          te: "లేదు (No)"
+          hi: "नहीं (No)"
+
+  - field_name: fever
+    section: hpi
+    priority: 6
+    required: false
+    input_type: yes_no
+    question:
+      en: "Do you have fever accompanying the motions?"
+      te: "మోషన్స్‌తో పాటు జ్వరం ఉందా?"
+      hi: "क्या दस्त के साथ बुखार भी है?"
+    options:
+      - value: "true"
+        label:
+          en: "YES"
+          te: "అవును (Yes)"
+          hi: "हाँ (Yes)"
+      - value: "false"
+        label:
+          en: "NO"
+          te: "లేదు (No)"
+          hi: "नहीं (No)"

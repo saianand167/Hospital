@@ -1,0 +1,54 @@
+symptom: headache
+canonical_names:
+  - headache
+  - head pain
+  - తలనొప్పి
+  - తల నొప్పి
+  - सिर दर्द
+  - सिर में दर्द
+
+questions:
+  - field_name: duration_days
+    section: hpi
+    priority: 1
+    required: true
+    input_type: number
+    min_val: 0
+    max_val: 365
+    question:
+      en: "How many days have you had this headache?"
+      te: "మీకు తలనొప్పి వచ్చి ఎన్ని రోజులైంది?"
+      hi: "आपको सिरदर्द कितने दिनों से है?"
+
+  - field_name: severity
+    section: hpi
+    priority: 2
+    required: true
+    input_type: scale
+    min_val: 0
+    max_val: 10
+    question:
+      en: "How severe is your headache from 0 to 10?"
+      te: "తలనొప్పి తీవ్రత 0 నుండి 10 వరకు ఎంత ఉంది?"
+      hi: "0 से 10 के पैमाने पर सिरदर्द कितना तेज है?"
+
+  - field_name: dizziness
+    section: hpi
+    priority: 3
+    required: true
+    input_type: yes_no
+    question:
+      en: "Do you experience dizziness or blurring of vision?"
+      te: "మీకు కళ్ళు తిరగడం లేదా చూపు మసకబారడం ఉందా?"
+      hi: "क्या आपको चक्कर आ रहा है या धुंधला दिखाई दे रहा है?"
+    options:
+      - value: "true"
+        label:
+          en: "YES"
+          te: "అవును (Yes)"
+          hi: "हाँ (Yes)"
+      - value: "false"
+        label:
+          en: "NO"
+          te: "లేదు (No)"
+          hi: "नहीं (No)"

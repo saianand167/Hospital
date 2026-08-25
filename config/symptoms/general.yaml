@@ -1,0 +1,15 @@
+symptom: general
+canonical_names:
+  - general
+  - initial
+
+questions:
+  - field_name: chief_complaint
+    section: chief_complaint
+    priority: 0
+    required: true
+    input_type: text
+    question:
+      en: "What are you suffering from today?"
+      te: "మీకు ప్రస్తుతం ఏ ఆరోగ్య సమస్య లేదా ఇబ్బంది ఉంది?"
+      hi: "आज आपको क्या तकलीफ या परेशानी हो रही है?"

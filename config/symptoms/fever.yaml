@@ -1,0 +1,85 @@
+symptom: fever
+canonical_names:
+  - fever
+  - high temperature
+  - chills
+  - జ్వరం
+  - చలి జ్వరం
+  - बुखार
+  - तप
+
+questions:
+  - field_name: duration_days
+    section: hpi
+    priority: 1
+    required: true
+    input_type: number
+    min_val: 0
+    max_val: 60
+    question:
+      en: "How many days have you had this fever?"
+      te: "మీకు జ్వరం వచ్చి ఎన్ని రోజులైంది?"
+      hi: "आपको बुखार कितने दिनों से है?"
+
+  - field_name: cough
+    section: hpi
+    priority: 2
+    required: true
+    input_type: yes_no
+    question:
+      en: "Do you have a cough with the fever?"
+      te: "జ్వరంతో పాటు దగ్గు ఉందా?"
+      hi: "क्या बुखार के साथ खांसी भी है?"
+    options:
+      - value: "true"
+        label:
+          en: "YES"
+          te: "అవును (Yes)"
+          hi: "हाँ (Yes)"
+      - value: "false"
+        label:
+          en: "NO"
+          te: "లేదు (No)"
+          hi: "नहीं (No)"
+
+  - field_name: breathlessness
+    section: hpi
+    priority: 3
+    required: true
+    input_type: yes_no
+    question:
+      en: "Are you having any breathing difficulty?"
+      te: "మీకు శ్వాస తీసుకోవడంలో ఏదైనా ఇబ్బంది ఉందా?"
+      hi: "क्या आपको सांस लेने में कोई तकलीफ है?"
+    options:
+      - value: "true"
+        label:
+          en: "YES"
+          te: "అవును (Yes)"
+          hi: "हाँ (Yes)"
+      - value: "false"
+        label:
+          en: "NO"
+          te: "లేదు (No)"
+          hi: "नहीं (No)"
+
+  - field_name: chills
+    section: hpi
+    priority: 4
+    required: false
+    input_type: yes_no
+    question:
+      en: "Do you experience shivering or chills?"
+      te: "మీకు చలి లేదా వణుకు వస్తుందా?"
+      hi: "क्या आपको ठंड लगकर कंपकंपी होती है?"
+    options:
+      - value: "true"
+        label:
+          en: "YES"
+          te: "అవును (Yes)"
+          hi: "हाँ (Yes)"
+      - value: "false"
+        label:
+          en: "NO"
+          te: "లేదు (No)"
+          hi: "नहीं (No)"

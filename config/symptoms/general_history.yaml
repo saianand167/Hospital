@@ -1,0 +1,80 @@
+symptom: general_history
+
+questions:
+  - field_name: diabetes_hypertension
+    section: past_history
+    priority: 10
+    required: false
+    input_type: single_choice
+    question:
+      en: "Do you have any existing conditions like Diabetes, High BP, or Heart Disease?"
+      te: "మీకు షుగర్ (డయాబెటిస్), బి.పి (BP), లేదా గుండె జబ్బులు ఉన్నాయా?"
+      hi: "क्या आपको शुगर (डायबिटीज), बीपी या दिल की कोई बीमारी है?"
+    options:
+      - value: "diabetes"
+        label:
+          en: "Diabetes"
+          te: "షుగర్ (Diabetes)"
+          hi: "डायबिटीज (Sugar)"
+      - value: "hypertension"
+        label:
+          en: "High BP (Hypertension)"
+          te: "హై బి.పి (High BP)"
+          hi: "हाई बीपी (High BP)"
+      - value: "heart_disease"
+        label:
+          en: "Heart Disease"
+          te: "గుండె జబ్బు (Heart Disease)"
+          hi: "हार्ट की बीमारी"
+      - value: "none"
+        label:
+          en: "None / No past conditions"
+          te: "ఏమీ లేవు (None)"
+          hi: "कोई नहीं (None)"
+
+  - field_name: drug_allergies
+    section: allergies
+    priority: 11
+    required: false
+    input_type: single_choice
+    question:
+      en: "Do you have any known allergies to medicines or injections?"
+      te: "మీకు ఏవైనా మందులు లేదా ఇంజెక్షన్ల వల్ల ఎలర్జీ ఉందా?"
+      hi: "क्या आपको किसी दवाई या इंजेक्शन से कोई एलर्जी है?"
+    options:
+      - value: "penicillin"
+        label:
+          en: "Penicillin / Antibiotics"
+          te: "పెన్సిలిన్ / యాంటీబయాటిక్స్"
+          hi: "पेनिसिलिन / एंटीबायोटिक"
+      - value: "sulfa"
+        label:
+          en: "Sulfa drugs"
+          te: "సల్ఫా మందులు"
+          hi: "सल्फा दवाएं"
+      - value: "none"
+        label:
+          en: "No known allergies"
+          te: "ఎటువంటి ఎలర్జీలు లేవు"
+          hi: "कोई एलर्जी नहीं"
+
+  - field_name: regular_medications
+    section: medications
+    priority: 12
+    required: false
+    input_type: single_choice
+    question:
+      en: "Are you taking any regular medications currently?"
+      te: "మీరు ప్రస్తుతం ఏవైనా రోజువారీ మందులు వాడుతున్నారా?"
+      hi: "क्या आप वर्तमान में कोई नियमित दवाइयां ले रहे हैं?"
+    options:
+      - value: "bp_sugar_meds"
+        label:
+          en: "Yes, BP or Sugar pills"
+          te: "అవును, BP లేదా షుగర్ మాత్రలు"
+          hi: "हाँ, बीपी या शुगर की दवाएं"
+      - value: "none"
+        label:
+          en: "No regular medications"
+          te: "ఎలాంటి మందులు వాడట్లేదు"
+          hi: "कोई दवा नहीं"
