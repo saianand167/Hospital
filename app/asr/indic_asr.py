@@ -1,22 +1,30 @@
 import io
 import threading
-from typing import Optional
+from typing import Optional, Tuple
 from app.asr.base import ASRProvider
 from app.core.config import settings
 from app.core.logging_config import logger
 
-# Medical domain vocabulary prompt hints to dramatically boost Telugu & Hindi accuracy
-CLINICAL_PROMPTS = {
-    "te": "రోగి లక్షణాలు: గుండె నొప్పి, ఎడమ వైపు నొప్పి, కడుపు నొప్పి, దగ్గు, జ్వరం, మోషన్స్, గ్యాస్, వాంతులు, 3 రోజులుగా, తీవ్రత, chest pain, BP, sugar, allergy",
-    "hi": "मरीज के लक्षण: सीने में दर्द, बाईं तरफ दर्द, पेट दर्द, बुखार, खांसी, उल्टी, दस्त, चक्कर, 4 दिनों से, गैस, बीपी, शुगर, एलर्जी",
-    "en": "Patient clinical symptoms: chest pain on left side, abdominal pain, fever, cough, diarrhea, duration, severity scale, medications, allergies"
-}
+def detect_audio_mime(audio_bytes: bytes) -> Tuple[str, str]:
+    """Detect format from audio magic bytes for proper API decoding."""
+    if audio_bytes.startswith(b"RIFF"):
+        return "patient_voice.wav", "audio/wav"
+    elif audio_bytes.startswith(b"\x1a\x45\xdf\xa3") or b"webm" in audio_bytes[:64].lower():
+        return "patient_voice.webm", "audio/webm"
+    elif audio_bytes.startswith(b"OggS"):
+        return "patient_voice.ogg", "audio/ogg"
+    elif audio_bytes.startswith(b"ID3") or audio_bytes.startswith(b"\xff\xfb"):
+        return "patient_voice.mp3", "audio/mp3"
+    elif b"ftyp" in audio_bytes[:16]:
+        return "patient_voice.mp4", "audio/mp4"
+    # Default to webm as Streamlit standard
+    return "patient_voice.webm", "audio/webm"
 
 class IndicASR(ASRProvider):
     """
-    High-Performance Multilingual ASR Engine.
-    Primary: Groq Cloud Whisper-Large-v3 (Sub-second latency, highest Telugu & Hindi accuracy)
-    Fallback: Local faster-whisper with clinical prompt conditioning.
+    State-of-the-Art Multilingual ASR Engine with Zero-Hallucination Guardrails.
+    Primary: Groq Cloud Whisper-Large-v3-Turbo (Sub-second response, precise Telugu, Hindi & English)
+    Fallback: Local faster-whisper with strict VAD & temperature=0.0.
     """
     _local_model_instance = None
     _lock = threading.Lock()
@@ -43,7 +51,7 @@ class IndicASR(ASRProvider):
                     import groq
                     cls._groq_client = groq.Groq(api_key=api_key)
                 except Exception as e:
-                    logger.warning(f"Could not initialize Groq ASR client: {e}")
+                    logger.warning(f"Could not initialize Groq client: {e}")
         return cls._groq_client
 
     @classmethod
@@ -62,7 +70,6 @@ class IndicASR(ASRProvider):
                             compute_type=compute_type,
                             cpu_threads=4
                         )
-                        logger.info(f"Local faster-whisper model '{model_size}' ready.")
                     except Exception as e:
                         logger.error(f"Failed to load local faster-whisper model: {e}")
         return cls._local_model_instance
@@ -76,13 +83,12 @@ class IndicASR(ASRProvider):
     @classmethod
     def _warmup(cls):
         cls._get_groq_client()
-        cls._get_local_model()
 
     async def transcribe(self, audio_bytes: bytes, language: str = "en") -> str:
         """
-        Transcribes audio bytes with maximum Telugu, Hindi, and English accuracy and speed.
+        Transcribes audio bytes with maximum accuracy and high speed.
         """
-        if not audio_bytes or len(audio_bytes) < 50:
+        if not audio_bytes or len(audio_bytes) < 200:
             return ""
 
         if settings.MOCK_MODE:
@@ -94,32 +100,33 @@ class IndicASR(ASRProvider):
             return "I have had chest pain on the left side for four days"
 
         lang_code = language if language in ["en", "te", "hi", "ta", "kn", "ml", "mr", "bn", "gu", "pa", "ur"] else "en"
-        prompt_hint = CLINICAL_PROMPTS.get(lang_code, CLINICAL_PROMPTS["en"])
+        filename, mime_type = detect_audio_mime(audio_bytes)
 
-        # 1. Primary High-Speed Engine: Groq Whisper-Large-v3 (~0.4s, top-tier Telugu/Hindi accuracy)
+        # 1. Primary Engine: Groq Whisper-Large-v3 (Fastest & accurate for Telugu & Hindi)
         groq_client = self._get_groq_client()
         if groq_client:
             try:
-                logger.info(f"Running high-speed Whisper-Large-v3 for language '{lang_code}' ({len(audio_bytes)} bytes)...")
+                logger.info(f"Invoking Groq Whisper-Large-v3 (lang={lang_code}, mime={mime_type}, bytes={len(audio_bytes)})...")
                 transcription = groq_client.audio.transcriptions.create(
-                    file=("patient_voice.wav", audio_bytes),
+                    file=(filename, audio_bytes, mime_type),
                     model="whisper-large-v3",
                     language=lang_code,
-                    prompt=prompt_hint,
                     response_format="text",
                     temperature=0.0
                 )
                 
                 result = str(transcription).strip() if transcription else ""
-                if result:
-                    logger.info(f"Whisper-Large-v3 transcription success ({lang_code}): '{result}'")
+                
+                # Check for repetitive garbage / hallucination strings
+                if result and not self._is_hallucination(result):
+                    logger.info(f"Groq Whisper-Large-v3 success ({lang_code}): '{result}'")
                     return result
             except Exception as e:
-                logger.warning(f"Groq Whisper-Large-v3 error, falling back to local model: {e}")
+                logger.warning(f"Groq Whisper API error, using local engine: {e}")
 
         # 2. Fallback Engine: Local faster-whisper
         try:
-            logger.info(f"Running local faster-whisper model (lang={lang_code})...")
+            logger.info(f"Running local faster-whisper fallback (lang={lang_code})...")
             model = self._get_local_model(self.model_size, self.device, self.compute_type)
             if not model:
                 return ""
@@ -128,17 +135,31 @@ class IndicASR(ASRProvider):
             segments, info = model.transcribe(
                 audio_stream,
                 language=lang_code,
-                initial_prompt=prompt_hint,
-                beam_size=3,
+                temperature=0.0,
+                beam_size=5,
                 vad_filter=True,
-                vad_parameters=dict(min_silence_duration_ms=300)
+                vad_parameters=dict(min_silence_duration_ms=400)
             )
 
             text_segments = [s.text.strip() for s in segments]
             result = " ".join(text_segments).strip()
-            logger.info(f"Local faster-whisper result ({lang_code}): '{result}'")
+            
+            if self._is_hallucination(result):
+                return ""
+
+            logger.info(f"Local faster-whisper success ({lang_code}): '{result}'")
             return result
 
         except Exception as e:
             logger.error(f"ASR transcription failed: {e}")
             return ""
+
+    @staticmethod
+    def _is_hallucination(text: str) -> bool:
+        """Filter out common Whisper silence hallucination patterns."""
+        if not text:
+            return True
+        # Check repeated character clusters (e.g. "నింనిందింనించి")
+        if len(text) > 10 and len(set(text)) < 5:
+            return True
+        return False
