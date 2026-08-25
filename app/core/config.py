@@ -29,6 +29,11 @@ class Settings(BaseModel):
     DEFAULT_LANGUAGE: str = "en"
     SUPPORTED_LANGUAGES: list[str] = ["en", "te", "hi"]
     
+    # ASR Voice Model Settings (Local faster-whisper)
+    ASR_MODEL_SIZE: str = os.getenv("ASR_MODEL_SIZE", "small")
+    ASR_DEVICE: str = os.getenv("ASR_DEVICE", "auto")
+    ASR_COMPUTE_TYPE: str = os.getenv("ASR_COMPUTE_TYPE", "int8")
+
     # Paths
     BASE_DIR: Path = Path(__file__).resolve().parent.parent.parent
     CONFIG_DIR: Path = Path(__file__).resolve().parent.parent.parent / "config"

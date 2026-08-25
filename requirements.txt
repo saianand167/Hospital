@@ -9,3 +9,5 @@ python-multipart>=0.0.9
 streamlit>=1.32.0
 pytest>=8.0.0
 pytest-asyncio>=0.23.0
+faster-whisper>=1.0.0
+edge-tts>=6.1.0
