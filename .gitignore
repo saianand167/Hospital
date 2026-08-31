@@ -1,29 +1,59 @@
-# Environments and Secrets
-.env
-.venv/
-venv/
-ENV/
-
-# Python cache
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
-*.pyo
 
-# Testing and Coverage
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+.venv/
+ENV/
+env/
+
+# Environment Variables (Secrets)
+.env
+.env.local
+*.env
+
+# SQLite databases & temp uploads
+*.db
+*.sqlite3
+temp_uploads/
+uploads/*
+!uploads/.gitkeep
+
+# IDEs & OS files
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Pytest / Coverage
 .pytest_cache/
 .coverage
 htmlcov/
 
-# Databases & Logs
-*.db
-*.sqlite3
-*.log
-
-# IDE & OS
-.vscode/
-.idea/
-.DS_Store
-Thumbs.db
-.cache/
-
+# Streamlit
+.streamlit/secrets.toml

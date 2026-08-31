@@ -1,0 +1,62 @@
+# === MediKiosk SIH26047 — .gitignore ===
+
+# Secrets — NEVER commit these
+.env
+*.env.local
+*.env.production
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pyc
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# Database files (local SQLite — Part 1 uses SQLite)
+*.db
+*.sqlite
+*.sqlite3
+
+# Storage / uploads
+storage/
+uploads/
+original_docs/
+temp_uploads/
+
+# Logs
+*.log
+logs/
+
+# PDF output
+*.pdf
+
+# Test artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node / React (if any)
+node_modules/
+.next/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo

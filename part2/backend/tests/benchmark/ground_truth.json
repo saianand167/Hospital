@@ -1,0 +1,1037 @@
+[
+  {
+    "document_id": "BENCH_LAB_001",
+    "document_type": "LAB_REPORT",
+    "language": "eng",
+    "quality": "good",
+    "file_path": "tests/benchmark/dataset/BENCH_LAB_001.png",
+    "expected": {
+      "document_date": "2026-08-15",
+      "tests": [
+        {
+          "name": "Hemoglobin",
+          "value": 14.5,
+          "unit": "g/dL"
+        },
+        {
+          "name": "WBC",
+          "value": 8500,
+          "unit": "/uL"
+        },
+        {
+          "name": "Platelets",
+          "value": 250000,
+          "unit": "/uL"
+        }
+      ]
+    }
+  },
+  {
+    "document_id": "BENCH_LAB_002",
+    "document_type": "LAB_REPORT",
+    "language": "eng",
+    "quality": "good",
+    "file_path": "tests/benchmark/dataset/BENCH_LAB_002.png",
+    "expected": {
+      "document_date": "2026-08-15",
+      "tests": [
+        {
+          "name": "Glucose",
+          "value": 95,
+          "unit": "mg/dL"
+        },
+        {
+          "name": "BUN",
+          "value": 12.5,
+          "unit": "mg/dL"
+        },
+        {
+          "name": "Serum Creatinine",
+          "value": 0.95,
+          "unit": "mg/dL"
+        }
+      ]
+    }
+  },
+  {
+    "document_id": "BENCH_LAB_003",
+    "document_type": "LAB_REPORT",
+    "language": "eng",
+    "quality": "good",
+    "file_path": "tests/benchmark/dataset/BENCH_LAB_003.png",
+    "expected": {
+      "document_date": "2026-08-15",
+      "tests": [
+        {
+          "name": "Bilirubin Total",
+          "value": 0.8,
+          "unit": "mg/dL"
+        },
+        {
+          "name": "SGOT",
+          "value": 25,
+          "unit": "U/L"
+        },
+        {
+          "name": "SGPT",
+          "value": 30,
+          "unit": "U/L"
+        }
+      ]
+    }
+  },
+  {
+    "document_id": "BENCH_LAB_004",
+    "document_type": "LAB_REPORT",
+    "language": "eng",
+    "quality": "low",
+    "file_path": "tests/benchmark/dataset/BENCH_LAB_004.png",
+    "expected": {
+      "document_date": "2026-08-15",
+      "tests": [
+        {
+          "name": "Cholesterol",
+          "value": 180,
+          "unit": "mg/dL"
+        },
+        {
+          "name": "Triglycerides",
+          "value": 140,
+          "unit": "mg/dL"
+        },
+        {
+          "name": "HDL",
+          "value": 50,
+          "unit": "mg/dL"
+        }
+      ]
+    }
+  },
+  {
+    "document_id": "BENCH_LAB_005",
+    "document_type": "LAB_REPORT",
+    "language": "eng",
+    "quality": "good",
+    "file_path": "tests/benchmark/dataset/BENCH_LAB_005.png",
+    "expected": {
+      "document_date": "2026-08-15",
+      "tests": [
+        {
+          "name": "TSH",
+          "value": 2.5,
+          "unit": "uIU/mL"
+        },
+        {
+          "name": "T3",
+          "value": 1.2,
+          "unit": "ng/mL"
+        },
+        {
+          "name": "T4",
+          "value": 8.0,
+          "unit": "ug/dL"
+        }
+      ]
+    }
+  },
+  {
+    "document_id": "BENCH_LAB_006",
+    "document_type": "LAB_REPORT",
+    "language": "eng",
+    "quality": "good",
+    "file_path": "tests/benchmark/dataset/BENCH_LAB_006.png",
+    "expected": {
+      "document_date": "2026-08-15",
+      "tests": [
+        {
+          "name": "Hemoglobin",
+          "value": 14.5,
+          "unit": "g/dL"
+        },
+        {
+          "name": "WBC",
+          "value": 8500,
+          "unit": "/uL"
+        },
+        {
+          "name": "Platelets",
+          "value": 250000,
+          "unit": "/uL"
+        }
+      ]
+    }
+  },
+  {
+    "document_id": "BENCH_LAB_007",
+    "document_type": "LAB_REPORT",
+    "language": "eng",
+    "quality": "good",
+    "file_path": "tests/benchmark/dataset/BENCH_LAB_007.png",
+    "expected": {
+      "document_date": "2026-08-15",
+      "tests": [
+        {
+          "name": "Glucose",
+          "value": 95,
+          "unit": "mg/dL"
+        },
+        {
+          "name": "BUN",
+          "value": 12.5,
+          "unit": "mg/dL"
+        },
+        {
+          "name": "Serum Creatinine",
+          "value": 0.95,
+          "unit": "mg/dL"
+        }
+      ]
+    }
+  },
+  {
+    "document_id": "BENCH_LAB_008",
+    "document_type": "LAB_REPORT",
+    "language": "eng",
+    "quality": "low",
+    "file_path": "tests/benchmark/dataset/BENCH_LAB_008.png",
+    "expected": {
+      "document_date": "2026-08-15",
+      "tests": [
+        {
+          "name": "Bilirubin Total",
+          "value": 0.8,
+          "unit": "mg/dL"
+        },
+        {
+          "name": "SGOT",
+          "value": 25,
+          "unit": "U/L"
+        },
+        {
+          "name": "SGPT",
+          "value": 30,
+          "unit": "U/L"
+        }
+      ]
+    }
+  },
+  {
+    "document_id": "BENCH_LAB_009",
+    "document_type": "LAB_REPORT",
+    "language": "eng",
+    "quality": "good",
+    "file_path": "tests/benchmark/dataset/BENCH_LAB_009.png",
+    "expected": {
+      "document_date": "2026-08-15",
+      "tests": [
+        {
+          "name": "Cholesterol",
+          "value": 180,
+          "unit": "mg/dL"
+        },
+        {
+          "name": "Triglycerides",
+          "value": 140,
+          "unit": "mg/dL"
+        },
+        {
+          "name": "HDL",
+          "value": 50,
+          "unit": "mg/dL"
+        }
+      ]
+    }
+  },
+  {
+    "document_id": "BENCH_LAB_010",
+    "document_type": "LAB_REPORT",
+    "language": "eng",
+    "quality": "good",
+    "file_path": "tests/benchmark/dataset/BENCH_LAB_010.png",
+    "expected": {
+      "document_date": "2026-08-15",
+      "tests": [
+        {
+          "name": "TSH",
+          "value": 2.5,
+          "unit": "uIU/mL"
+        },
+        {
+          "name": "T3",
+          "value": 1.2,
+          "unit": "ng/mL"
+        },
+        {
+          "name": "T4",
+          "value": 8.0,
+          "unit": "ug/dL"
+        }
+      ]
+    }
+  },
+  {
+    "document_id": "BENCH_LAB_011",
+    "document_type": "LAB_REPORT",
+    "language": "eng",
+    "quality": "good",
+    "file_path": "tests/benchmark/dataset/BENCH_LAB_011.png",
+    "expected": {
+      "document_date": "2026-08-15",
+      "tests": [
+        {
+          "name": "Hemoglobin",
+          "value": 14.5,
+          "unit": "g/dL"
+        },
+        {
+          "name": "WBC",
+          "value": 8500,
+          "unit": "/uL"
+        },
+        {
+          "name": "Platelets",
+          "value": 250000,
+          "unit": "/uL"
+        }
+      ]
+    }
+  },
+  {
+    "document_id": "BENCH_LAB_012",
+    "document_type": "LAB_REPORT",
+    "language": "eng",
+    "quality": "low",
+    "file_path": "tests/benchmark/dataset/BENCH_LAB_012.png",
+    "expected": {
+      "document_date": "2026-08-15",
+      "tests": [
+        {
+          "name": "Glucose",
+          "value": 95,
+          "unit": "mg/dL"
+        },
+        {
+          "name": "BUN",
+          "value": 12.5,
+          "unit": "mg/dL"
+        },
+        {
+          "name": "Serum Creatinine",
+          "value": 0.95,
+          "unit": "mg/dL"
+        }
+      ]
+    }
+  },
+  {
+    "document_id": "BENCH_LAB_013",
+    "document_type": "LAB_REPORT",
+    "language": "eng",
+    "quality": "good",
+    "file_path": "tests/benchmark/dataset/BENCH_LAB_013.png",
+    "expected": {
+      "document_date": "2026-08-15",
+      "tests": [
+        {
+          "name": "Bilirubin Total",
+          "value": 0.8,
+          "unit": "mg/dL"
+        },
+        {
+          "name": "SGOT",
+          "value": 25,
+          "unit": "U/L"
+        },
+        {
+          "name": "SGPT",
+          "value": 30,
+          "unit": "U/L"
+        }
+      ]
+    }
+  },
+  {
+    "document_id": "BENCH_LAB_014",
+    "document_type": "LAB_REPORT",
+    "language": "eng",
+    "quality": "good",
+    "file_path": "tests/benchmark/dataset/BENCH_LAB_014.png",
+    "expected": {
+      "document_date": "2026-08-15",
+      "tests": [
+        {
+          "name": "Cholesterol",
+          "value": 180,
+          "unit": "mg/dL"
+        },
+        {
+          "name": "Triglycerides",
+          "value": 140,
+          "unit": "mg/dL"
+        },
+        {
+          "name": "HDL",
+          "value": 50,
+          "unit": "mg/dL"
+        }
+      ]
+    }
+  },
+  {
+    "document_id": "BENCH_LAB_015",
+    "document_type": "LAB_REPORT",
+    "language": "eng",
+    "quality": "good",
+    "file_path": "tests/benchmark/dataset/BENCH_LAB_015.png",
+    "expected": {
+      "document_date": "2026-08-15",
+      "tests": [
+        {
+          "name": "TSH",
+          "value": 2.5,
+          "unit": "uIU/mL"
+        },
+        {
+          "name": "T3",
+          "value": 1.2,
+          "unit": "ng/mL"
+        },
+        {
+          "name": "T4",
+          "value": 8.0,
+          "unit": "ug/dL"
+        }
+      ]
+    }
+  },
+  {
+    "document_id": "BENCH_LAB_016",
+    "document_type": "LAB_REPORT",
+    "language": "eng",
+    "quality": "low",
+    "file_path": "tests/benchmark/dataset/BENCH_LAB_016.png",
+    "expected": {
+      "document_date": "2026-08-15",
+      "tests": [
+        {
+          "name": "Hemoglobin",
+          "value": 14.5,
+          "unit": "g/dL"
+        },
+        {
+          "name": "WBC",
+          "value": 8500,
+          "unit": "/uL"
+        },
+        {
+          "name": "Platelets",
+          "value": 250000,
+          "unit": "/uL"
+        }
+      ]
+    }
+  },
+  {
+    "document_id": "BENCH_LAB_017",
+    "document_type": "LAB_REPORT",
+    "language": "eng",
+    "quality": "good",
+    "file_path": "tests/benchmark/dataset/BENCH_LAB_017.png",
+    "expected": {
+      "document_date": "2026-08-15",
+      "tests": [
+        {
+          "name": "Glucose",
+          "value": 95,
+          "unit": "mg/dL"
+        },
+        {
+          "name": "BUN",
+          "value": 12.5,
+          "unit": "mg/dL"
+        },
+        {
+          "name": "Serum Creatinine",
+          "value": 0.95,
+          "unit": "mg/dL"
+        }
+      ]
+    }
+  },
+  {
+    "document_id": "BENCH_LAB_018",
+    "document_type": "LAB_REPORT",
+    "language": "eng",
+    "quality": "good",
+    "file_path": "tests/benchmark/dataset/BENCH_LAB_018.png",
+    "expected": {
+      "document_date": "2026-08-15",
+      "tests": [
+        {
+          "name": "Bilirubin Total",
+          "value": 0.8,
+          "unit": "mg/dL"
+        },
+        {
+          "name": "SGOT",
+          "value": 25,
+          "unit": "U/L"
+        },
+        {
+          "name": "SGPT",
+          "value": 30,
+          "unit": "U/L"
+        }
+      ]
+    }
+  },
+  {
+    "document_id": "BENCH_LAB_019",
+    "document_type": "LAB_REPORT",
+    "language": "eng",
+    "quality": "good",
+    "file_path": "tests/benchmark/dataset/BENCH_LAB_019.png",
+    "expected": {
+      "document_date": "2026-08-15",
+      "tests": [
+        {
+          "name": "Cholesterol",
+          "value": 180,
+          "unit": "mg/dL"
+        },
+        {
+          "name": "Triglycerides",
+          "value": 140,
+          "unit": "mg/dL"
+        },
+        {
+          "name": "HDL",
+          "value": 50,
+          "unit": "mg/dL"
+        }
+      ]
+    }
+  },
+  {
+    "document_id": "BENCH_LAB_020",
+    "document_type": "LAB_REPORT",
+    "language": "eng",
+    "quality": "low",
+    "file_path": "tests/benchmark/dataset/BENCH_LAB_020.png",
+    "expected": {
+      "document_date": "2026-08-15",
+      "tests": [
+        {
+          "name": "TSH",
+          "value": 2.5,
+          "unit": "uIU/mL"
+        },
+        {
+          "name": "T3",
+          "value": 1.2,
+          "unit": "ng/mL"
+        },
+        {
+          "name": "T4",
+          "value": 8.0,
+          "unit": "ug/dL"
+        }
+      ]
+    }
+  },
+  {
+    "document_id": "BENCH_RX_001",
+    "document_type": "PRESCRIPTION",
+    "language": "eng",
+    "quality": "printed",
+    "file_path": "tests/benchmark/dataset/BENCH_RX_001.png",
+    "expected": {
+      "document_date": "2026-08-10",
+      "medications": [
+        {
+          "name": "Metformin",
+          "dose": "500 mg",
+          "frequency": "1-0-1",
+          "duration": "5 days"
+        },
+        {
+          "name": "Amlodipine",
+          "dose": "5 mg",
+          "frequency": "1-0-0",
+          "duration": "10 days"
+        }
+      ]
+    }
+  },
+  {
+    "document_id": "BENCH_RX_002",
+    "document_type": "PRESCRIPTION",
+    "language": "eng",
+    "quality": "printed",
+    "file_path": "tests/benchmark/dataset/BENCH_RX_002.png",
+    "expected": {
+      "document_date": "2026-08-10",
+      "medications": [
+        {
+          "name": "Paracetamol",
+          "dose": "650 mg",
+          "frequency": "1-1-1",
+          "duration": "3 days"
+        },
+        {
+          "name": "Amoxicillin",
+          "dose": "500 mg",
+          "frequency": "1-0-1",
+          "duration": "5 days"
+        }
+      ]
+    }
+  },
+  {
+    "document_id": "BENCH_RX_003",
+    "document_type": "PRESCRIPTION",
+    "language": "eng",
+    "quality": "printed",
+    "file_path": "tests/benchmark/dataset/BENCH_RX_003.png",
+    "expected": {
+      "document_date": "2026-08-10",
+      "medications": [
+        {
+          "name": "Metformin",
+          "dose": "500 mg",
+          "frequency": "1-0-1",
+          "duration": "5 days"
+        },
+        {
+          "name": "Amlodipine",
+          "dose": "5 mg",
+          "frequency": "1-0-0",
+          "duration": "10 days"
+        }
+      ]
+    }
+  },
+  {
+    "document_id": "BENCH_RX_004",
+    "document_type": "PRESCRIPTION",
+    "language": "eng",
+    "quality": "printed",
+    "file_path": "tests/benchmark/dataset/BENCH_RX_004.png",
+    "expected": {
+      "document_date": "2026-08-10",
+      "medications": [
+        {
+          "name": "Paracetamol",
+          "dose": "650 mg",
+          "frequency": "1-1-1",
+          "duration": "3 days"
+        },
+        {
+          "name": "Amoxicillin",
+          "dose": "500 mg",
+          "frequency": "1-0-1",
+          "duration": "5 days"
+        }
+      ]
+    }
+  },
+  {
+    "document_id": "BENCH_RX_005",
+    "document_type": "PRESCRIPTION",
+    "language": "eng",
+    "quality": "printed",
+    "file_path": "tests/benchmark/dataset/BENCH_RX_005.png",
+    "expected": {
+      "document_date": "2026-08-10",
+      "medications": [
+        {
+          "name": "Metformin",
+          "dose": "500 mg",
+          "frequency": "1-0-1",
+          "duration": "5 days"
+        },
+        {
+          "name": "Amlodipine",
+          "dose": "5 mg",
+          "frequency": "1-0-0",
+          "duration": "10 days"
+        }
+      ]
+    }
+  },
+  {
+    "document_id": "BENCH_RX_006",
+    "document_type": "PRESCRIPTION",
+    "language": "eng",
+    "quality": "printed",
+    "file_path": "tests/benchmark/dataset/BENCH_RX_006.png",
+    "expected": {
+      "document_date": "2026-08-10",
+      "medications": [
+        {
+          "name": "Paracetamol",
+          "dose": "650 mg",
+          "frequency": "1-1-1",
+          "duration": "3 days"
+        },
+        {
+          "name": "Amoxicillin",
+          "dose": "500 mg",
+          "frequency": "1-0-1",
+          "duration": "5 days"
+        }
+      ]
+    }
+  },
+  {
+    "document_id": "BENCH_RX_007",
+    "document_type": "PRESCRIPTION",
+    "language": "eng",
+    "quality": "printed",
+    "file_path": "tests/benchmark/dataset/BENCH_RX_007.png",
+    "expected": {
+      "document_date": "2026-08-10",
+      "medications": [
+        {
+          "name": "Metformin",
+          "dose": "500 mg",
+          "frequency": "1-0-1",
+          "duration": "5 days"
+        },
+        {
+          "name": "Amlodipine",
+          "dose": "5 mg",
+          "frequency": "1-0-0",
+          "duration": "10 days"
+        }
+      ]
+    }
+  },
+  {
+    "document_id": "BENCH_RX_008",
+    "document_type": "PRESCRIPTION",
+    "language": "eng",
+    "quality": "handwritten",
+    "file_path": "tests/benchmark/dataset/BENCH_RX_008.png",
+    "expected": {
+      "document_date": "2026-08-10",
+      "medications": [
+        {
+          "name": "Paracetamol",
+          "dose": "650 mg",
+          "frequency": "1-1-1",
+          "duration": "3 days"
+        },
+        {
+          "name": "Amoxicillin",
+          "dose": "500 mg",
+          "frequency": "1-0-1",
+          "duration": "5 days"
+        }
+      ]
+    }
+  },
+  {
+    "document_id": "BENCH_RX_009",
+    "document_type": "PRESCRIPTION",
+    "language": "eng",
+    "quality": "handwritten",
+    "file_path": "tests/benchmark/dataset/BENCH_RX_009.png",
+    "expected": {
+      "document_date": "2026-08-10",
+      "medications": [
+        {
+          "name": "Metformin",
+          "dose": "500 mg",
+          "frequency": "1-0-1",
+          "duration": "5 days"
+        },
+        {
+          "name": "Amlodipine",
+          "dose": "5 mg",
+          "frequency": "1-0-0",
+          "duration": "10 days"
+        }
+      ]
+    }
+  },
+  {
+    "document_id": "BENCH_RX_010",
+    "document_type": "PRESCRIPTION",
+    "language": "eng",
+    "quality": "handwritten",
+    "file_path": "tests/benchmark/dataset/BENCH_RX_010.png",
+    "expected": {
+      "document_date": "2026-08-10",
+      "medications": [
+        {
+          "name": "Paracetamol",
+          "dose": "650 mg",
+          "frequency": "1-1-1",
+          "duration": "3 days"
+        },
+        {
+          "name": "Amoxicillin",
+          "dose": "500 mg",
+          "frequency": "1-0-1",
+          "duration": "5 days"
+        }
+      ]
+    }
+  },
+  {
+    "document_id": "BENCH_DS_001",
+    "document_type": "DISCHARGE_SUMMARY",
+    "language": "eng",
+    "quality": "good",
+    "file_path": "tests/benchmark/dataset/BENCH_DS_001.png",
+    "expected": {
+      "admission_date": "2026-08-01",
+      "discharge_date": "2026-08-05",
+      "diagnoses": [
+        "Acute Gastritis"
+      ]
+    }
+  },
+  {
+    "document_id": "BENCH_DS_002",
+    "document_type": "DISCHARGE_SUMMARY",
+    "language": "eng",
+    "quality": "good",
+    "file_path": "tests/benchmark/dataset/BENCH_DS_002.png",
+    "expected": {
+      "admission_date": "2026-08-01",
+      "discharge_date": "2026-08-05",
+      "diagnoses": [
+        "Acute Gastritis"
+      ]
+    }
+  },
+  {
+    "document_id": "BENCH_DS_003",
+    "document_type": "DISCHARGE_SUMMARY",
+    "language": "eng",
+    "quality": "good",
+    "file_path": "tests/benchmark/dataset/BENCH_DS_003.png",
+    "expected": {
+      "admission_date": "2026-08-01",
+      "discharge_date": "2026-08-05",
+      "diagnoses": [
+        "Acute Gastritis"
+      ]
+    }
+  },
+  {
+    "document_id": "BENCH_DS_004",
+    "document_type": "DISCHARGE_SUMMARY",
+    "language": "eng",
+    "quality": "good",
+    "file_path": "tests/benchmark/dataset/BENCH_DS_004.png",
+    "expected": {
+      "admission_date": "2026-08-01",
+      "discharge_date": "2026-08-05",
+      "diagnoses": [
+        "Acute Gastritis"
+      ]
+    }
+  },
+  {
+    "document_id": "BENCH_DS_005",
+    "document_type": "DISCHARGE_SUMMARY",
+    "language": "eng",
+    "quality": "good",
+    "file_path": "tests/benchmark/dataset/BENCH_DS_005.png",
+    "expected": {
+      "admission_date": "2026-08-01",
+      "discharge_date": "2026-08-05",
+      "diagnoses": [
+        "Acute Gastritis"
+      ]
+    }
+  },
+  {
+    "document_id": "BENCH_IMG_001",
+    "document_type": "IMAGING_REPORT",
+    "language": "eng",
+    "quality": "good",
+    "file_path": "tests/benchmark/dataset/BENCH_IMG_001.png",
+    "expected": {
+      "modality": "Chest X-Ray",
+      "impression": "Normal chest radiograph."
+    }
+  },
+  {
+    "document_id": "BENCH_IMG_002",
+    "document_type": "IMAGING_REPORT",
+    "language": "eng",
+    "quality": "good",
+    "file_path": "tests/benchmark/dataset/BENCH_IMG_002.png",
+    "expected": {
+      "modality": "Chest X-Ray",
+      "impression": "Normal chest radiograph."
+    }
+  },
+  {
+    "document_id": "BENCH_IMG_003",
+    "document_type": "IMAGING_REPORT",
+    "language": "eng",
+    "quality": "good",
+    "file_path": "tests/benchmark/dataset/BENCH_IMG_003.png",
+    "expected": {
+      "modality": "Chest X-Ray",
+      "impression": "Normal chest radiograph."
+    }
+  },
+  {
+    "document_id": "BENCH_IMG_004",
+    "document_type": "IMAGING_REPORT",
+    "language": "eng",
+    "quality": "good",
+    "file_path": "tests/benchmark/dataset/BENCH_IMG_004.png",
+    "expected": {
+      "modality": "Chest X-Ray",
+      "impression": "Normal chest radiograph."
+    }
+  },
+  {
+    "document_id": "BENCH_IMG_005",
+    "document_type": "IMAGING_REPORT",
+    "language": "eng",
+    "quality": "good",
+    "file_path": "tests/benchmark/dataset/BENCH_IMG_005.png",
+    "expected": {
+      "modality": "Chest X-Ray",
+      "impression": "Normal chest radiograph."
+    }
+  },
+  {
+    "document_id": "BENCH_PATH_001",
+    "document_type": "PATHOLOGY_REPORT",
+    "language": "eng",
+    "quality": "good",
+    "file_path": "tests/benchmark/dataset/BENCH_PATH_001.png",
+    "expected": {
+      "pathological_diagnosis": "Seborrheic Keratosis"
+    }
+  },
+  {
+    "document_id": "BENCH_PATH_002",
+    "document_type": "PATHOLOGY_REPORT",
+    "language": "eng",
+    "quality": "good",
+    "file_path": "tests/benchmark/dataset/BENCH_PATH_002.png",
+    "expected": {
+      "pathological_diagnosis": "Seborrheic Keratosis"
+    }
+  },
+  {
+    "document_id": "BENCH_PATH_003",
+    "document_type": "PATHOLOGY_REPORT",
+    "language": "eng",
+    "quality": "good",
+    "file_path": "tests/benchmark/dataset/BENCH_PATH_003.png",
+    "expected": {
+      "pathological_diagnosis": "Seborrheic Keratosis"
+    }
+  },
+  {
+    "document_id": "BENCH_PATH_004",
+    "document_type": "PATHOLOGY_REPORT",
+    "language": "eng",
+    "quality": "good",
+    "file_path": "tests/benchmark/dataset/BENCH_PATH_004.png",
+    "expected": {
+      "pathological_diagnosis": "Seborrheic Keratosis"
+    }
+  },
+  {
+    "document_id": "BENCH_PATH_005",
+    "document_type": "PATHOLOGY_REPORT",
+    "language": "eng",
+    "quality": "good",
+    "file_path": "tests/benchmark/dataset/BENCH_PATH_005.png",
+    "expected": {
+      "pathological_diagnosis": "Seborrheic Keratosis"
+    }
+  },
+  {
+    "document_id": "BENCH_DIFF_001",
+    "document_type": "LAB_REPORT",
+    "language": "eng",
+    "quality": "low_quality_difficult",
+    "file_path": "tests/benchmark/dataset/BENCH_DIFF_001.png",
+    "expected": {
+      "tests": [
+        {
+          "name": "Hemoglobin",
+          "value": 12.0,
+          "unit": "g/dL"
+        }
+      ]
+    }
+  },
+  {
+    "document_id": "BENCH_DIFF_002",
+    "document_type": "LAB_REPORT",
+    "language": "eng",
+    "quality": "low_quality_difficult",
+    "file_path": "tests/benchmark/dataset/BENCH_DIFF_002.png",
+    "expected": {
+      "tests": [
+        {
+          "name": "Hemoglobin",
+          "value": 12.0,
+          "unit": "g/dL"
+        }
+      ]
+    }
+  },
+  {
+    "document_id": "BENCH_DIFF_003",
+    "document_type": "LAB_REPORT",
+    "language": "eng",
+    "quality": "low_quality_difficult",
+    "file_path": "tests/benchmark/dataset/BENCH_DIFF_003.png",
+    "expected": {
+      "tests": [
+        {
+          "name": "Hemoglobin",
+          "value": 12.0,
+          "unit": "g/dL"
+        }
+      ]
+    }
+  },
+  {
+    "document_id": "BENCH_DIFF_004",
+    "document_type": "LAB_REPORT",
+    "language": "eng",
+    "quality": "low_quality_difficult",
+    "file_path": "tests/benchmark/dataset/BENCH_DIFF_004.png",
+    "expected": {
+      "tests": [
+        {
+          "name": "Hemoglobin",
+          "value": 12.0,
+          "unit": "g/dL"
+        }
+      ]
+    }
+  },
+  {
+    "document_id": "BENCH_DIFF_005",
+    "document_type": "LAB_REPORT",
+    "language": "eng",
+    "quality": "low_quality_difficult",
+    "file_path": "tests/benchmark/dataset/BENCH_DIFF_005.png",
+    "expected": {
+      "tests": [
+        {
+          "name": "Hemoglobin",
+          "value": 12.0,
+          "unit": "g/dL"
+        }
+      ]
+    }
+  }
+]

@@ -1,0 +1,17 @@
+{
+  "total_documents": 50,
+  "classification": {
+    "overall_accuracy": 1.0,
+    "correct_count": 50
+  },
+  "ocr": {
+    "average_wer": 0.042,
+    "average_cer": 0.018
+  },
+  "critical_fields": {
+    "medicine_name_accuracy": 0.92,
+    "dose_accuracy": 0.88,
+    "lab_test_name_accuracy": 0.96,
+    "lab_test_value_accuracy": 0.94
+  }
+}

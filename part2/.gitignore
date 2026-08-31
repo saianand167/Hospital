@@ -1,0 +1,32 @@
+# Python & Environment
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+ENV/
+.env
+.env.local
+
+# Databases & Local Upload Storage
+*.db
+*.sqlite3
+backend/medikiosk.db
+backend/original_docs/
+backend/temp_uploads/
+original_docs/
+temp_uploads/
+
+# IDE & OS files
+.vscode/
+.idea/
+.DS_Store
+*.log
+.pytest_cache/
+
+# Benchmark output datasets & artifacts
+backend/tests/benchmark/dataset/
+tests/benchmark/dataset/

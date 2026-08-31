@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg15
+    container_name: medikiosk-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: medikiosk
+      POSTGRES_USER: medikiosk
+      POSTGRES_PASSWORD: medikiosk
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U medikiosk -d medikiosk"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: medikiosk-backend
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://medikiosk:medikiosk@postgres:5432/medikiosk
+      GROK_API_KEY: ${GROK_API_KEY:-mock-grok-key}
+      SECRET_KEY: ${SECRET_KEY:-medikiosk_super_secret_jwt_key_2026_sih}
+      STORAGE_DIR: /app/storage/documents
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - storage_data:/app/storage
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: medikiosk-frontend
+    restart: always
+    ports:
+      - "8501:8501"
+    environment:
+      BACKEND_API_BASE: http://backend:8000/api/v1
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
+  storage_data:

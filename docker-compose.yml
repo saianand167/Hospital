@@ -1,0 +1,41 @@
+version: '3.9'
+
+# ──────────────────────────────────────────────
+#  SIH26047 — MediKiosk  (PostgreSQL + pgvector)
+#  Start:   docker compose up -d
+#  Stop:    docker compose down         (data preserved)
+#  Destroy: docker compose down -v      (DELETES all data — never do in production)
+# ──────────────────────────────────────────────
+
+services:
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: medikiosk_postgres
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_USER:     ${POSTGRES_USER:-medikiosk_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-medikiosk_pass_2026}
+      POSTGRES_DB:       ${POSTGRES_DB:-medikiosk_db}
+
+    ports:
+      # Expose on 5433 so it doesn't conflict with any local PostgreSQL on 5432
+      - "${POSTGRES_PORT:-5433}:5432"
+
+    volumes:
+      # Named volume — data persists across restarts
+      - medikiosk_pgdata:/var/lib/postgresql/data
+      # Initialization SQL runs ONCE on first container start
+      - ./database/init.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-medikiosk_user} -d ${POSTGRES_DB:-medikiosk_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+volumes:
+  medikiosk_pgdata:
+    driver: local
