@@ -300,11 +300,13 @@ class DeterministicMedicalValidator:
         (r"\bpmid\b|\bpubmed\b", "PubMed ID citation, not a patient test"),
         (r"evaluation of the new|beckman coulter|coulter access", "Analyzer/instrument validation reference"),
         (r"99th percentile", "Statistical reference limit description, not patient result"),
-        (r"biomarker study group|esc guidelines|wallach\'s interpretation|clinical chemistry|elsevier", "Academic journal/guideline citation"),
+        (r"biomarker study group|esc guidelines|wallach\'s interpretation|clinical chemistry|elsevier|teitz text book", "Academic journal/guideline citation"),
         (r"ckd-epi 2009|derivation of ckd-epi|normalized to 1\.73", "eGFR formula explanation / educational disclaimer"),
         (r"system generated e-copy|authorized signatory|department of laboratory", "Laboratory legal footer/metadata"),
         (r"^page \d+ of \d+$|^end of report$", "Document pagination header/footer"),
         (r"^methodology\s*:|^specimen\s*:", "Testing methodology or specimen label"),
+        (r"^note\s*:|^disclaimer\s*:", "Educational note / disclaimer"),
+        (r"upper reference limit|repeat sample after|diagnostic of mi|may be ruled in", "Clinical interpretation note"),
     ]
 
     OCR_SPELLING_CORRECTIONS = {
@@ -328,17 +330,23 @@ class DeterministicMedicalValidator:
         "mmol/1": "mmol/L",
         "mmol/l": "mmol/L",
         "umol/l": "µmol/L",
-        "/cumm": "/cu.mm",
-        "/cu mm": "/cu.mm",
-        "/cu.mm": "/cu.mm",
+        "gh": "g/dL",
         "g/dl": "g/dL",
         "g/dl.": "g/dL",
+        "f1": "fL",
         "fl": "fL",
+        "l": "fL",
+        "ul": "µL",
         "pg": "pg",
         "%": "%",
         "ng/l": "ng/L",
         "ng/ml": "ng/mL",
+        "/cumm": "/cu.mm",
+        "/cu mm": "/cu.mm",
+        "/ cu.mm": "/cu.mm",
+        "/cu.mm": "/cu.mm",
         "million/cu.mm": "million/cu.mm",
+        "mil/cumm": "million/cu.mm",
         "ml/min/1.73sq.m": "ml/min/1.73sq.m",
     }
 
@@ -358,6 +366,8 @@ class DeterministicMedicalValidator:
     def correct_test_name(cls, test_name: str) -> str:
         """Correct only unambiguous OCR character drops without hallucinating new tests."""
         cleaned = test_name.strip(" -:=#*")
+        if re.search(r"^roponin-i\b", cleaned, re.IGNORECASE):
+            return "Troponin-I" + cleaned[9:]
         for pat, replacement in cls.OCR_SPELLING_CORRECTIONS.items():
             if re.search(pat, cleaned, re.IGNORECASE):
                 cleaned = re.sub(pat, replacement, cleaned, flags=re.IGNORECASE)
@@ -366,8 +376,11 @@ class DeterministicMedicalValidator:
     @classmethod
     def normalize_unit(cls, unit: str) -> str:
         """Normalize unit formatting."""
-        u = unit.strip()
-        return cls.UNIT_NORMALIZATIONS.get(u.lower(), u)
+        u = unit.strip(" {}[]()")
+        u_low = u.lower()
+        if "ml/min" in u_low:
+            return "ml/min/1.73sq.m"
+        return cls.UNIT_NORMALIZATIONS.get(u_low, u)
 
     @classmethod
     def compute_status_and_flag(cls, val_str: str, ref_range: str, explicit_flag: str = "") -> Tuple[str, str]:
@@ -386,7 +399,6 @@ class DeterministicMedicalValidator:
         # Evaluate against numeric reference ranges if available
         if ref_range and ref_range.strip():
             try:
-                # Remove non-numeric characters from value
                 v_clean = re.search(r"[-+]?\d*\.\d+|\d+", str(val_str))
                 if v_clean:
                     num_val = float(v_clean.group(0))
@@ -432,7 +444,7 @@ class DeterministicMedicalValidator:
         return status, flag
 
     @classmethod
-    def clean_patient_metadata(cls, patient_raw: Dict[str, Any]) -> Dict[str, str]:
+    def clean_patient_metadata(cls, patient_raw: Dict[str, Any], full_ocr_text: str = "") -> Dict[str, str]:
         """Ensure patient labels like 'Age', 'Sex', 'Reg No' are cleanly separated from patient_name."""
         cleaned = {
             "patient_name": "",
@@ -447,15 +459,51 @@ class DeterministicMedicalValidator:
             "referred_by": "",
             "specimen": ""
         }
+        
+        # Populate from provided dictionary
         for k in cleaned.keys():
             v = str(patient_raw.get(k, "") or "").strip()
-            # Clean unwanted field names concatenated into patient_name
             if k == "patient_name" and v:
                 v = re.split(r"\b(Age|Sex|Reg|Registration|Lab|Date|Episode|Ref|Dr)\b", v, flags=re.IGNORECASE)[0]
                 v = v.strip(" :-\t\n")
-                if any(kw in v.upper() for kw in ["HOSPITAL", "DOCTOR", "LABORATORY", "PAGE", "REPORT"]):
+                if any(kw in v.upper() for kw in ["HOSPITAL", "DOCTOR", "LABORATORY", "PAGE", "REPORT", "CERTIFICATE"]):
                     v = ""
             cleaned[k] = v
+
+        # Fallback to scanning OCR text directly if metadata is missing
+        if full_ocr_text and not cleaned["patient_name"]:
+            for line in full_ocr_text.split("\n"):
+                line = line.strip()
+                if not line:
+                    continue
+                if "NAME" in line.upper() and ("AGE" in line.upper() or "SEX" in line.upper() or ":" in line):
+                    m_n = re.search(r"Name\s*[:\-=]\s*([A-Za-z\s\.\,\'\-]+?)(?=\s+(?:Age|Sex|Reg|Lab|Date|Episode|Ref|Dr|$))", line, re.IGNORECASE)
+                    if m_n and not cleaned["patient_name"]:
+                        n_cand = m_n.group(1).strip(" :-\t")
+                        if len(n_cand) > 1 and not any(kw in n_cand.upper() for kw in ["HOSPITAL", "DOCTOR", "LABORATORY", "PAGE", "REPORT", "CERTIFICATE"]):
+                            cleaned["patient_name"] = n_cand
+                    
+                    m_a = re.search(r"Age\s*[:\-=]\s*([0-9]{1,3}(?:\s*(?:yrs|years|y|m|months))?|[A-Za-z]{1,4})", line, re.IGNORECASE)
+                    if m_a and not cleaned["age"]:
+                        cleaned["age"] = m_a.group(1).strip()
+                        
+                    m_s = re.search(r"Sex\s*[:\-=]\s*([A-Za-z]+)", line, re.IGNORECASE)
+                    if m_s and not cleaned["sex"]:
+                        cleaned["sex"] = m_s.group(1).strip()
+
+                if "REGISTRATION" in line.upper() or "LAB NO" in line.upper():
+                    m_reg = re.search(r"Registration\s*No\s*[:\-=]?\s*([A-Za-z0-9\-_]+)", line, re.IGNORECASE)
+                    if m_reg and not cleaned["registration_no"]:
+                        cleaned["registration_no"] = m_reg.group(1).strip()
+                    m_lab = re.search(r"Lab\s*No\s*[:\-=]?\s*([A-Za-z0-9\-_]+)", line, re.IGNORECASE)
+                    if m_lab and not cleaned["lab_no"]:
+                        cleaned["lab_no"] = m_lab.group(1).strip()
+
+                if "SPECIMEN" in line.upper():
+                    m_spec = re.search(r"Specimen\s*[:\-=]?\s*([A-Za-z0-9\s\/\-_]+)", line, re.IGNORECASE)
+                    if m_spec and not cleaned["specimen"]:
+                        cleaned["specimen"] = m_spec.group(1).strip()
+
         return cleaned
 
     @classmethod
@@ -465,10 +513,10 @@ class DeterministicMedicalValidator:
         1. Separates genuine tests from excluded non-test items (DOI, PMID, research citations).
         2. Corrects unambiguous OCR errors and normalizes units.
         3. Computes accurate clinical status and preserves flags.
-        4. Detects missing tests from full OCR text.
+        4. Detects and recovers missing tests from full multi-page OCR text.
         5. Calculates exact validation metrics dynamically.
         """
-        patient = cls.clean_patient_metadata(raw_data.get("patient", {}))
+        patient = cls.clean_patient_metadata(raw_data.get("patient", {}), full_ocr_text=full_ocr_text)
         raw_tests = raw_data.get("tests", [])
         raw_excluded = raw_data.get("excluded_items", [])
 
@@ -501,7 +549,7 @@ class DeterministicMedicalValidator:
 
             corrected_name = cls.correct_test_name(t_name)
             unit_norm = cls.normalize_unit(str(t.get("unit", "")))
-            ref_r = str(t.get("reference_range", "")).strip()
+            ref_r = str(t.get("reference_range", "")).strip(" []{}()")
             expl_flag = str(t.get("flag", "")).strip()
 
             # Calculate accurate clinical status and explicit flag
@@ -513,6 +561,8 @@ class DeterministicMedicalValidator:
                 conf = "HIGH"
 
             section = str(t.get("section", "")).strip()
+            if not section and "TROPONIN" in corrected_name.upper():
+                section = "BIOCHEMISTRY / CARDIAC MARKERS"
 
             valid_tests.append({
                 "section": section,
@@ -525,40 +575,74 @@ class DeterministicMedicalValidator:
                 "confidence": conf
             })
 
-        # ── Second-Pass Missing Test Detection ─────────────────────────────
+        # ── Second-Pass Full Document Parser & Missing Test Recovery ────────
         possible_missing = False
         if full_ocr_text:
-            # Check for tabular rows in raw OCR that might not be in valid_tests
-            extracted_names_lower = {t["test_name"].lower() for t in valid_tests}
+            extracted_names_clean = {re.sub(r"[^a-zA-Z0-9]", "", t["test_name"].lower()) for t in valid_tests}
+            curr_section = "BIOCHEMISTRY"
+            
             for line in full_ocr_text.split("\n"):
                 line = line.strip()
-                if not line:
+                if not line or line.startswith("--- Page") or line.startswith("LIFE"):
                     continue
-                # Match standard lab report table rows: Name + Result Value + Unit + Reference Range
-                m_tab = re.search(r"^([A-Za-z\s\-\(\)\/\*]{3,40}?)\s+([0-9\.]+)\s*(#|\*)?\s+([a-zA-Z\/\%\<\>\.\-\^0-9]{1,15})\s+(?:\[|\()?([0-9\.\-\<\>\s]{2,20})(?:\]|\))?", line)
+
+                # Section tracking
+                if "RENAL PANEL" in line.upper():
+                    curr_section = "RENAL PANEL - I"
+                    continue
+                elif "TROPONIN" in line.upper() and ("HIGH SENSITIVE" in line.upper() or "CARDIAC" in line.upper()):
+                    curr_section = "BIOCHEMISTRY / CARDIAC MARKERS"
+                    continue
+                elif "COMPLETE BLOOD COUNT" in line.upper():
+                    curr_section = "HAEMATOLOGY / COMPLETE BLOOD COUNT"
+                    continue
+                elif "DIFFERENTIAL COUNT" in line.upper():
+                    curr_section = "HAEMATOLOGY / DIFFERENTIAL COUNT"
+                    continue
+
+                # Check non-test patterns
+                is_bad, reason = cls.is_non_test(line)
+                if is_bad:
+                    if not any(ex["text"] == line for ex in excluded_items):
+                        excluded_items.append({"text": line, "reason": reason})
+                    continue
+
+                # Match tabular lab rows across all bracket formats and flag styles
+                m_tab = re.search(
+                    r"^([A-Za-z0-9\s\-\(\)\/\*\.\,\:]+?)\s+([0-9\.]+)\s*(#|\*)?\s+([a-zA-Z\/\%\<\>\.\-\^0-9]+|\/\s*cu\.?mm|\/cu\s*mm)\s+(?:\[|\{|\{\[|\{\()?([0-9\.\-\<\>\s]{2,20})(?:\]|\)|\}\])?",
+                    line
+                )
                 if m_tab:
-                    cand_name = m_tab.group(1).strip(" *#-:")
-                    is_bad, _ = cls.is_non_test(cand_name, m_tab.group(2))
-                    if not is_bad and cand_name.lower() not in extracted_names_lower and len(cand_name) > 3:
-                        if not any(cand_name.lower() in ext_n for ext_n in extracted_names_lower):
-                            # Recover missed test row with HIGH confidence
-                            rec_val = m_tab.group(2).strip()
-                            rec_flag = m_tab.group(3).strip() if m_tab.group(3) else ""
-                            rec_unit = cls.normalize_unit(m_tab.group(4).strip())
-                            rec_ref = m_tab.group(5).strip() if m_tab.group(5) else ""
-                            rec_status, rec_flag = cls.compute_status_and_flag(rec_val, rec_ref, rec_flag)
-                            
-                            valid_tests.append({
-                                "section": "",
-                                "test_name": cls.correct_test_name(cand_name),
-                                "result_value": rec_val,
-                                "unit": rec_unit,
-                                "reference_range": rec_ref,
-                                "status": rec_status,
-                                "flag": rec_flag,
-                                "confidence": "HIGH"
-                            })
-                            extracted_names_lower.add(cand_name.lower())
+                    cand_name = cls.correct_test_name(m_tab.group(1).strip(" *#-:= "))
+                    is_bad, reason = cls.is_non_test(cand_name, m_tab.group(2))
+                    if is_bad:
+                        if not any(ex["text"] == line for ex in excluded_items):
+                            excluded_items.append({"text": line, "reason": reason})
+                        continue
+
+                    cand_clean = re.sub(r"[^a-zA-Z0-9]", "", cand_name.lower())
+                    if cand_clean and cand_clean not in extracted_names_clean:
+                        rec_val = m_tab.group(2).strip()
+                        rec_flag = m_tab.group(3).strip() if m_tab.group(3) else ""
+                        rec_unit = cls.normalize_unit(m_tab.group(4))
+                        rec_ref = m_tab.group(5).strip(" []{}()")
+                        rec_status, rec_flag = cls.compute_status_and_flag(rec_val, rec_ref, rec_flag)
+                        
+                        sec = curr_section
+                        if "TROPONIN" in cand_name.upper():
+                            sec = "BIOCHEMISTRY / CARDIAC MARKERS"
+
+                        valid_tests.append({
+                            "section": sec,
+                            "test_name": cand_name,
+                            "result_value": rec_val,
+                            "unit": rec_unit,
+                            "reference_range": rec_ref,
+                            "status": rec_status,
+                            "flag": rec_flag,
+                            "confidence": "HIGH"
+                        })
+                        extracted_names_clean.add(cand_clean)
 
         # ── Dynamic Calculation of All Validation Counts ──────────────────
         high_c = sum(1 for t in valid_tests if t["confidence"] == "HIGH")
