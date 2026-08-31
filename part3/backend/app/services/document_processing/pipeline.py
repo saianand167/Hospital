@@ -26,6 +26,12 @@ except ImportError:
     HAS_PYPDF = False
 
 try:
+    import pymupdf  # PyMuPDF
+    HAS_PYMUPDF = True
+except ImportError:
+    HAS_PYMUPDF = False
+
+try:
     import easyocr
     HAS_EASYOCR = True
 except ImportError:
@@ -34,50 +40,7 @@ except ImportError:
 from app.config import settings
 from app.services.llm_service import grok_service
 
-# Global EasyOCR reader cache (lazy loaded)
-_easyocr_reader = None
-
-def get_easyocr_reader():
-    global _easyocr_reader
-    if _easyocr_reader is None and HAS_EASYOCR:
-        try:
-            logger.info("Initializing EasyOCR reader (CPU)...")
-            _easyocr_reader = easyocr.Reader(['en'], gpu=False, verbose=False)
-        except Exception as e:
-            logger.warning(f"Could not initialize EasyOCR: {e}")
-    return _easyocr_reader
-
-
-# ── 1. OCR Provider ────────────────────────────────────────────────────────────
-
-class OCRResult:
-    def __init__(self, text: str, confidence: float):
-        self.text = text
-        self.confidence = confidence
-
-
-def preprocess_image_for_tesseract(img: Image.Image) -> List[Image.Image]:
-    """Generate preprocessed image variants for robust Tesseract character and number recognition."""
-    variants = []
-    
-    # Variant 1: Enhanced Grayscale + 2x Upscale + Sharpness
-    w, h = img.size
-    upscaled = img.resize((w * 2, h * 2), Image.Resampling.LANCZOS)
-    gray = upscaled.convert("L")
-    enhancer = ImageEnhance.Contrast(gray)
-    contrast_img = enhancer.enhance(1.8)
-    sharpener = ImageEnhance.Sharpness(contrast_img)
-    sharp_img = sharpener.enhance(2.0)
-    variants.append(sharp_img)
-    
-    # Variant 2: High-contrast binarized (Otsu-style)
-    try:
-        fn = lambda x: 255 if x > 150 else 0
-        bin_img = sharp_img.point(fn, mode="1")
-        variants.append(bin_img)
-    except Exception:
-        pass
-# ── Tesseract Path Detection ──────────────────────────────────────────────────
+# ── Tesseract Path Detection & Setup ──────────────────────────────────────────
 if HAS_TESSERACT:
     tesseract_candidates = [
         getattr(settings, "TESSERACT_CMD", ""),
@@ -96,8 +59,21 @@ if HAS_TESSERACT:
             except Exception:
                 pass
 
+# Global EasyOCR reader cache (lazy loaded fallback)
+_easyocr_reader = None
 
-# ── 1. OCR Provider ────────────────────────────────────────────────────────────
+def get_easyocr_reader():
+    global _easyocr_reader
+    if _easyocr_reader is None and HAS_EASYOCR:
+        try:
+            logger.info("Initializing EasyOCR reader (CPU fallback)...")
+            _easyocr_reader = easyocr.Reader(['en'], gpu=False, verbose=False)
+        except Exception as e:
+            logger.warning(f"Could not initialize EasyOCR: {e}")
+    return _easyocr_reader
+
+
+# ── 1. OCR Provider & Preprocessing ───────────────────────────────────────────
 
 class OCRResult:
     def __init__(self, text: str, confidence: float):
@@ -119,7 +95,7 @@ def preprocess_image_for_tesseract(img: Image.Image) -> List[Image.Image]:
     sharp_img = sharpener.enhance(2.0)
     variants.append(sharp_img)
     
-    # Variant 2: Normal Grayscale with slight contrast enhancement (for crisp scans)
+    # Variant 2: Normal Grayscale with moderate contrast boost
     try:
         norm_gray = img.convert("L")
         norm_enh = ImageEnhance.Contrast(norm_gray).enhance(1.4)
@@ -135,7 +111,7 @@ class DocumentOCRProvider:
     def extract_from_image(image_bytes: bytes, filename: str) -> OCRResult:
         """Extract high-accuracy text from image using Tesseract OCR (Primary)."""
         
-        # ── 1. PRIMARY: Tesseract OCR (v5.4.0) ─────────────────────────────
+        # ── PRIMARY: Tesseract OCR ─────────────────────────────────────────
         if HAS_TESSERACT:
             try:
                 raw_img = Image.open(io.BytesIO(image_bytes))
@@ -174,7 +150,7 @@ class DocumentOCRProvider:
             except Exception as e:
                 logger.warning(f"Tesseract OCR failed on {filename} ({e}), trying fallback engines...")
 
-        # ── 2. FALLBACK 1: Groq Vision AI (qwen/qwen3.8-27b) ─────────────
+        # ── FALLBACK 1: Groq Vision AI ─────────────────────────────────────
         groq_api_key = getattr(settings, "GROQ_API_KEY", "") or os.getenv("GROQ_API_KEY", "")
         if groq_api_key:
             try:
@@ -226,7 +202,7 @@ class DocumentOCRProvider:
             except Exception as e:
                 logger.warning(f"Groq Vision fallback error: {e}")
 
-        # ── 3. FALLBACK 2: EasyOCR (Python CPU) ───────────────────────────
+        # ── FALLBACK 2: EasyOCR (Python CPU) ───────────────────────────────
         reader = get_easyocr_reader()
         if reader:
             try:
@@ -244,7 +220,7 @@ class DocumentOCRProvider:
             except Exception as e:
                 logger.warning(f"EasyOCR extraction error on {filename}: {e}")
 
-        # ── 4. Unresolvable Image ──────────────────────────────────────────
+        # ── Unresolvable Image ─────────────────────────────────────────────
         return OCRResult(
             text=f"Uploaded Document: {filename}\n[Image text could not be clearly resolved.]",
             confidence=0.50
@@ -252,48 +228,47 @@ class DocumentOCRProvider:
 
     @staticmethod
     def extract_from_pdf(pdf_bytes: bytes, filename: str) -> OCRResult:
-        """Extract text from PDF: extracts selectable text or renders pages into high-res images for Tesseract OCR."""
+        """Extract text from all pages of PDF: selectable text or high-res page rendering for Tesseract OCR."""
         all_pages_text = []
         avg_confs = []
 
-        # ── Attempt 1: PyMuPDF (fitz) page rendering & OCR ──────────────
-        try:
-            import pymupdf  # PyMuPDF
-            doc = pymupdf.open(stream=pdf_bytes, filetype="pdf")
-            logger.info(f"Processing PDF '{filename}' with {len(doc)} pages using PyMuPDF + Tesseract...")
-            
-            for page_num in range(len(doc)):
-                page = doc[page_num]
-                # First check if selectable digital text is available on this page
-                page_text = page.get_text().strip()
+        # ── PyMuPDF (fitz) page rendering & OCR ────────────────────────────
+        if HAS_PYMUPDF:
+            try:
+                doc = pymupdf.open(stream=pdf_bytes, filetype="pdf")
+                logger.info(f"Processing PDF '{filename}' with {len(doc)} pages using PyMuPDF + Tesseract...")
                 
-                # If digital text is substantial (> 40 chars), use it directly
-                if page_text and len(page_text) > 40:
-                    all_pages_text.append(f"--- Page {page_num + 1} ---\n{page_text}")
-                    avg_confs.append(0.98)
-                else:
-                    # Scanned PDF page: render to high-res image (200 DPI) and run Tesseract OCR
-                    zoom = 200 / 72.0  # 200 DPI
-                    matrix = pymupdf.Matrix(zoom, zoom)
-                    pix = page.get_pixmap(matrix=matrix)
-                    img_bytes = pix.tobytes("png")
+                for page_num in range(len(doc)):
+                    page = doc[page_num]
+                    # Check if selectable digital text is present
+                    page_text = page.get_text().strip()
                     
-                    ocr_page_res = DocumentOCRProvider.extract_from_image(img_bytes, f"{filename}_page_{page_num + 1}.png")
-                    if ocr_page_res.text and len(ocr_page_res.text.strip()) > 10:
-                        all_pages_text.append(f"--- Page {page_num + 1} ---\n{ocr_page_res.text}")
-                        avg_confs.append(ocr_page_res.confidence)
-            
-            doc.close()
-            
-            if all_pages_text:
-                combined_text = "\n\n".join(all_pages_text)
-                overall_conf = sum(avg_confs) / len(avg_confs) if avg_confs else 0.90
-                logger.info(f"✅ Extracted {len(combined_text)} characters across {len(all_pages_text)} pages from {filename}")
-                return OCRResult(text=combined_text, confidence=round(overall_conf, 3))
-        except Exception as e:
-            logger.warning(f"PyMuPDF processing failed on {filename} ({e}), falling back to pypdf...")
+                    if page_text and len(page_text) > 40:
+                        all_pages_text.append(f"--- Page {page_num + 1} ---\n{page_text}")
+                        avg_confs.append(0.98)
+                    else:
+                        # Scanned PDF page: render to high-res image (200 DPI) and run Tesseract OCR
+                        zoom = 200 / 72.0  # 200 DPI
+                        matrix = pymupdf.Matrix(zoom, zoom)
+                        pix = page.get_pixmap(matrix=matrix)
+                        img_bytes = pix.tobytes("png")
+                        
+                        ocr_page_res = DocumentOCRProvider.extract_from_image(img_bytes, f"{filename}_page_{page_num + 1}.png")
+                        if ocr_page_res.text and len(ocr_page_res.text.strip()) > 10:
+                            all_pages_text.append(f"--- Page {page_num + 1} ---\n{ocr_page_res.text}")
+                            avg_confs.append(ocr_page_res.confidence)
+                
+                doc.close()
+                
+                if all_pages_text:
+                    combined_text = "\n\n".join(all_pages_text)
+                    overall_conf = sum(avg_confs) / len(avg_confs) if avg_confs else 0.90
+                    logger.info(f"✅ Extracted {len(combined_text)} characters across {len(all_pages_text)} pages from {filename}")
+                    return OCRResult(text=combined_text, confidence=round(overall_conf, 3))
+            except Exception as e:
+                logger.warning(f"PyMuPDF processing failed on {filename} ({e}), falling back to pypdf...")
 
-        # ── Attempt 2: pypdf text extraction ─────────────────────────────
+        # ── pypdf text extraction ──────────────────────────────────────────
         if HAS_PYPDF:
             try:
                 reader = pypdf.PdfReader(io.BytesIO(pdf_bytes))
@@ -312,68 +287,336 @@ class DocumentOCRProvider:
         return DocumentOCRProvider.extract_from_image(pdf_bytes, filename)
 
 
-# ── 2. Structured Data Extractor via Groq AI ─────────────────────────────────
+# ── 2. Deterministic Medical Validator & Correction Engine ───────────────────
+
+class DeterministicMedicalValidator:
+    """
+    Deterministic post-extraction validation and error correction layer.
+    Ensures research citations, DOI, PMID, formulas, and equipment notes NEVER become patient test results.
+    """
+
+    NON_TEST_PATTERNS = [
+        (r"\bdoi\b|10\.\d{4,9}/[-._;()/:A-Za-z0-9]+", "DOI academic identifier, not a patient test"),
+        (r"\bpmid\b|\bpubmed\b", "PubMed ID citation, not a patient test"),
+        (r"evaluation of the new|beckman coulter|coulter access", "Analyzer/instrument validation reference"),
+        (r"99th percentile", "Statistical reference limit description, not patient result"),
+        (r"biomarker study group|esc guidelines|wallach\'s interpretation|clinical chemistry|elsevier", "Academic journal/guideline citation"),
+        (r"ckd-epi 2009|derivation of ckd-epi|normalized to 1\.73", "eGFR formula explanation / educational disclaimer"),
+        (r"system generated e-copy|authorized signatory|department of laboratory", "Laboratory legal footer/metadata"),
+        (r"^page \d+ of \d+$|^end of report$", "Document pagination header/footer"),
+        (r"^methodology\s*:|^specimen\s*:", "Testing methodology or specimen label"),
+    ]
+
+    OCR_SPELLING_CORRECTIONS = {
+        r"^roponin-i\b": "Troponin-I",
+        r"^ropnin-i\b": "Troponin-I",
+        r"\b(haemoglobi|hemoglobi)\b": "Haemoglobin",
+        r"\b(platele|platelet count)\b": "Platelet Count",
+        r"\b(creatinin)\b": "Creatinine",
+        r"\b(leukocyt)\b": "Leukocyte",
+        r"\b(eosinophi)\b": "Eosinophil",
+        r"\b(basophi)\b": "Basophil",
+        r"\b(neutrophi)\b": "Neutrophil",
+        r"\b(lymphocyt)\b": "Lymphocyte",
+        r"\b(monocyt)\b": "Monocyte",
+    }
+
+    UNIT_NORMALIZATIONS = {
+        "mg/dl": "mg/dL",
+        "mg/dl.": "mg/dL",
+        "mg/100ml": "mg/dL",
+        "mmol/1": "mmol/L",
+        "mmol/l": "mmol/L",
+        "umol/l": "µmol/L",
+        "/cumm": "/cu.mm",
+        "/cu mm": "/cu.mm",
+        "/cu.mm": "/cu.mm",
+        "g/dl": "g/dL",
+        "g/dl.": "g/dL",
+        "fl": "fL",
+        "pg": "pg",
+        "%": "%",
+        "ng/l": "ng/L",
+        "ng/ml": "ng/mL",
+        "million/cu.mm": "million/cu.mm",
+        "ml/min/1.73sq.m": "ml/min/1.73sq.m",
+    }
+
+    @classmethod
+    def is_non_test(cls, test_name: str, result_val: str = "") -> Tuple[bool, str]:
+        """Check if item matches any research reference, DOI, PMID, or disclaimer pattern."""
+        combined = f"{test_name} {result_val}".strip()
+        if not test_name or len(test_name.strip()) < 2:
+            return True, "Empty or invalid test name"
+
+        for pattern, reason in cls.NON_TEST_PATTERNS:
+            if re.search(pattern, combined, re.IGNORECASE):
+                return True, reason
+        return False, ""
+
+    @classmethod
+    def correct_test_name(cls, test_name: str) -> str:
+        """Correct only unambiguous OCR character drops without hallucinating new tests."""
+        cleaned = test_name.strip(" -:=#*")
+        for pat, replacement in cls.OCR_SPELLING_CORRECTIONS.items():
+            if re.search(pat, cleaned, re.IGNORECASE):
+                cleaned = re.sub(pat, replacement, cleaned, flags=re.IGNORECASE)
+        return cleaned
+
+    @classmethod
+    def normalize_unit(cls, unit: str) -> str:
+        """Normalize unit formatting."""
+        u = unit.strip()
+        return cls.UNIT_NORMALIZATIONS.get(u.lower(), u)
+
+    @classmethod
+    def compute_status_and_flag(cls, val_str: str, ref_range: str, explicit_flag: str = "") -> Tuple[str, str]:
+        """Determine clinical status ('LOW', 'NORMAL', 'HIGH', 'CRITICAL', 'ABNORMAL', 'UNKNOWN') and preserve flags."""
+        flag = explicit_flag.strip()
+        status = "UNKNOWN"
+
+        # Check explicit flag first
+        if flag in ("#", "*", "H", "High", "HIGH"):
+            status = "HIGH" if "H" in flag.upper() else "ABNORMAL"
+        elif flag in ("L", "Low", "LOW"):
+            status = "LOW"
+        elif "CRITICAL" in flag.upper():
+            status = "CRITICAL"
+
+        # Evaluate against numeric reference ranges if available
+        if ref_range and ref_range.strip():
+            try:
+                # Remove non-numeric characters from value
+                v_clean = re.search(r"[-+]?\d*\.\d+|\d+", str(val_str))
+                if v_clean:
+                    num_val = float(v_clean.group(0))
+                    
+                    if "-" in ref_range:
+                        parts = ref_range.split("-")
+                        low_m = re.search(r"[-+]?\d*\.\d+|\d+", parts[0])
+                        high_m = re.search(r"[-+]?\d*\.\d+|\d+", parts[1])
+                        if low_m and high_m:
+                            low_b = float(low_m.group(0))
+                            high_b = float(high_m.group(0))
+                            if num_val < low_b:
+                                status = "LOW"
+                                if not flag: flag = "#"
+                            elif num_val > high_b:
+                                status = "HIGH"
+                                if not flag: flag = "#"
+                            else:
+                                status = "NORMAL"
+                    elif "<" in ref_range:
+                        high_m = re.search(r"[-+]?\d*\.\d+|\d+", ref_range)
+                        if high_m:
+                            high_b = float(high_m.group(0))
+                            if num_val > high_b:
+                                status = "HIGH"
+                                if not flag: flag = "#"
+                            else:
+                                status = "NORMAL"
+                    elif ">" in ref_range:
+                        low_m = re.search(r"[-+]?\d*\.\d+|\d+", ref_range)
+                        if low_m:
+                            low_b = float(low_m.group(0))
+                            if num_val < low_b:
+                                status = "LOW"
+                                if not flag: flag = "#"
+                            else:
+                                status = "NORMAL"
+            except Exception:
+                pass
+        elif status == "UNKNOWN" and not flag:
+            status = "UNKNOWN"
+
+        return status, flag
+
+    @classmethod
+    def clean_patient_metadata(cls, patient_raw: Dict[str, Any]) -> Dict[str, str]:
+        """Ensure patient labels like 'Age', 'Sex', 'Reg No' are cleanly separated from patient_name."""
+        cleaned = {
+            "patient_name": "",
+            "age": "",
+            "sex": "",
+            "registration_no": "",
+            "lab_no": "",
+            "patient_episode": "",
+            "collection_date": "",
+            "receiving_date": "",
+            "reporting_date": "",
+            "referred_by": "",
+            "specimen": ""
+        }
+        for k in cleaned.keys():
+            v = str(patient_raw.get(k, "") or "").strip()
+            # Clean unwanted field names concatenated into patient_name
+            if k == "patient_name" and v:
+                v = re.split(r"\b(Age|Sex|Reg|Registration|Lab|Date|Episode|Ref|Dr)\b", v, flags=re.IGNORECASE)[0]
+                v = v.strip(" :-\t\n")
+                if any(kw in v.upper() for kw in ["HOSPITAL", "DOCTOR", "LABORATORY", "PAGE", "REPORT"]):
+                    v = ""
+            cleaned[k] = v
+        return cleaned
+
+    @classmethod
+    def validate_and_normalize(cls, raw_data: Dict[str, Any], full_ocr_text: str = "") -> Dict[str, Any]:
+        """
+        Comprehensive deterministic validation pass:
+        1. Separates genuine tests from excluded non-test items (DOI, PMID, research citations).
+        2. Corrects unambiguous OCR errors and normalizes units.
+        3. Computes accurate clinical status and preserves flags.
+        4. Detects missing tests from full OCR text.
+        5. Calculates exact validation metrics dynamically.
+        """
+        patient = cls.clean_patient_metadata(raw_data.get("patient", {}))
+        raw_tests = raw_data.get("tests", [])
+        raw_excluded = raw_data.get("excluded_items", [])
+
+        valid_tests: List[Dict[str, Any]] = []
+        excluded_items: List[Dict[str, Any]] = []
+
+        # Preserve previously identified excluded items
+        for ex in raw_excluded:
+            if isinstance(ex, dict) and ex.get("text"):
+                excluded_items.append({"text": str(ex["text"]).strip(), "reason": str(ex.get("reason", "Excluded item")).strip()})
+
+        # Process each extracted test candidate
+        for t in raw_tests:
+            if not isinstance(t, dict):
+                continue
+
+            t_name = str(t.get("test_name", "")).strip()
+            r_val = str(t.get("result_value", "")).strip()
+
+            # Check if this item is actually a reference citation / DOI / PMID / disclaimer
+            is_bad, reason = cls.is_non_test(t_name, r_val)
+            if is_bad:
+                excluded_items.append({"text": f"{t_name}: {r_val}".strip(" :"), "reason": reason})
+                continue
+
+            # Check if result_value contains numbers or valid clinical text
+            if not r_val or r_val.lower() in ("null", "none", "n/a"):
+                excluded_items.append({"text": t_name, "reason": "No patient measurement result"})
+                continue
+
+            corrected_name = cls.correct_test_name(t_name)
+            unit_norm = cls.normalize_unit(str(t.get("unit", "")))
+            ref_r = str(t.get("reference_range", "")).strip()
+            expl_flag = str(t.get("flag", "")).strip()
+
+            # Calculate accurate clinical status and explicit flag
+            status, flag = cls.compute_status_and_flag(r_val, ref_r, expl_flag)
+
+            # Confidence assessment
+            conf = str(t.get("confidence", "HIGH")).upper()
+            if conf not in ("HIGH", "MEDIUM", "LOW"):
+                conf = "HIGH"
+
+            section = str(t.get("section", "")).strip()
+
+            valid_tests.append({
+                "section": section,
+                "test_name": corrected_name,
+                "result_value": r_val,
+                "unit": unit_norm,
+                "reference_range": ref_r,
+                "status": status,
+                "flag": flag,
+                "confidence": conf
+            })
+
+        # ── Second-Pass Missing Test Detection ─────────────────────────────
+        possible_missing = False
+        if full_ocr_text:
+            # Check for tabular rows in raw OCR that might not be in valid_tests
+            extracted_names_lower = {t["test_name"].lower() for t in valid_tests}
+            for line in full_ocr_text.split("\n"):
+                line = line.strip()
+                if not line:
+                    continue
+                # Match standard lab report table rows: Name + Result Value + Unit + Reference Range
+                m_tab = re.search(r"^([A-Za-z\s\-\(\)\/\*]{3,40}?)\s+([0-9\.]+)\s*(#|\*)?\s+([a-zA-Z\/\%\<\>\.\-\^0-9]{1,15})\s+(?:\[|\()?([0-9\.\-\<\>\s]{2,20})(?:\]|\))?", line)
+                if m_tab:
+                    cand_name = m_tab.group(1).strip(" *#-:")
+                    is_bad, _ = cls.is_non_test(cand_name, m_tab.group(2))
+                    if not is_bad and cand_name.lower() not in extracted_names_lower and len(cand_name) > 3:
+                        if not any(cand_name.lower() in ext_n for ext_n in extracted_names_lower):
+                            # Recover missed test row with HIGH confidence
+                            rec_val = m_tab.group(2).strip()
+                            rec_flag = m_tab.group(3).strip() if m_tab.group(3) else ""
+                            rec_unit = cls.normalize_unit(m_tab.group(4).strip())
+                            rec_ref = m_tab.group(5).strip() if m_tab.group(5) else ""
+                            rec_status, rec_flag = cls.compute_status_and_flag(rec_val, rec_ref, rec_flag)
+                            
+                            valid_tests.append({
+                                "section": "",
+                                "test_name": cls.correct_test_name(cand_name),
+                                "result_value": rec_val,
+                                "unit": rec_unit,
+                                "reference_range": rec_ref,
+                                "status": rec_status,
+                                "flag": rec_flag,
+                                "confidence": "HIGH"
+                            })
+                            extracted_names_lower.add(cand_name.lower())
+
+        # ── Dynamic Calculation of All Validation Counts ──────────────────
+        high_c = sum(1 for t in valid_tests if t["confidence"] == "HIGH")
+        med_c = sum(1 for t in valid_tests if t["confidence"] == "MEDIUM")
+        low_c = sum(1 for t in valid_tests if t["confidence"] == "LOW")
+
+        return {
+            "document_type": raw_data.get("document_type", "LAB_REPORT"),
+            "patient": patient,
+            "tests": valid_tests,
+            "medications": raw_data.get("medications", []),
+            "excluded_items": excluded_items,
+            "validation": {
+                "total_tests": len(valid_tests),
+                "high_confidence_tests": high_c,
+                "medium_confidence_tests": med_c,
+                "low_confidence_tests": low_c,
+                "excluded_non_test_items": len(excluded_items),
+                "possible_missing_tests": possible_missing,
+                "notes": f"Validated {len(valid_tests)} patient laboratory tests. Filtered {len(excluded_items)} non-test items."
+            }
+        }
+
+
+# ── 3. Structured Data Extractor via Groq AI ─────────────────────────────────
 
 class StructuredDataExtractor:
     @staticmethod
     def extract_structured_data(raw_text: str, document_type: str) -> Dict[str, Any]:
-        """Convert extracted real OCR text into structured JSON parameters via Groq AI with strict clinical validation."""
-        empty_result = {
-            "document_type": document_type,
-            "patient": {
-                "patient_name": "",
-                "age": "",
-                "sex": "",
-                "registration_no": "",
-                "lab_no": "",
-                "patient_episode": "",
-                "collection_date": "",
-                "receiving_date": "",
-                "reporting_date": "",
-                "referred_by": "",
-                "specimen": ""
-            },
-            "tests": [],
-            "medications": [],
-            "excluded_items": [],
-            "validation": {
-                "total_tests": 0,
-                "high_confidence_tests": 0,
-                "medium_confidence_tests": 0,
-                "low_confidence_tests": 0,
-                "excluded_non_test_items": 0,
-                "possible_missing_tests": False,
-                "notes": "No text extracted from document."
-            }
-        }
-
+        """Convert complete OCR text into validated structured JSON parameters via Groq AI."""
         if not raw_text or len(raw_text.strip()) < 10:
-            return empty_result
+            return DeterministicMedicalValidator.validate_and_normalize(
+                {"document_type": document_type, "tests": [], "excluded_items": []},
+                full_ocr_text=""
+            )
 
         prompt = f"""You are an expert medical laboratory report OCR extraction and validation engine.
 
-Your task is to convert the COMPLETE OCR TEXT provided at the bottom into accurate, structured JSON.
+Your task is to convert the COMPLETE OCR TEXT provided at the bottom of this prompt into accurate, structured JSON.
 
 IMPORTANT:
-1. Extract information from ALL pages of the OCR TEXT across all sections. Do not stop after finding the first few tests.
-2. Accuracy is more important than completeness by guessing. Never invent, estimate, or hallucinate information.
-3. The OCR TEXT is the only source of truth.
-4. Extract ONLY genuine PATIENT LABORATORY TEST RESULTS.
+1. Extract information from ALL pages of the OCR TEXT across all laboratory sections.
+2. Accuracy is paramount. Extract ONLY genuine PATIENT LABORATORY TEST RESULTS.
    A genuine test result normally contains: TEST NAME + PATIENT RESULT + UNIT and/or REFERENCE RANGE.
-5. NEVER EXTRACT THESE AS TESTS (add to excluded_items instead):
+3. NEVER EXTRACT THESE AS TESTS (place them in excluded_items instead):
    - DOI, PMID, journal citations, bibliography, research papers, study authors, publication information
    - Methodology descriptions, analyzer/instrument descriptions, educational text, disclaimers, comments, notes
    - 99th percentile text unless explicitly the patient's individual measurement
    - Isolated numbers, dates, registration numbers, page headers/footers
-6. OCR Error Correction:
-   - Correct only obvious OCR errors when strongly supported by surrounding medical context (e.g. 'roponin-I' -> 'Troponin-I').
-   - Normalize obvious unit formatting ('mg/dl' -> 'mg/dL', 'mmol/1' -> 'mmol/L', '/cu mm' -> '/cu.mm').
-   - Preserve reported decimal precision exactly as reported (e.g. '1.30' -> '1.30', '9.81' -> '9.81').
-7. Preserve actual test names (e.g. 'Plasma GLUCOSE- Random (Hexokinase)', 'BUN (Urease/GLDH)').
-8. Determine status ('LOW', 'NORMAL', 'HIGH', 'CRITICAL', 'ABNORMAL', 'UNKNOWN') using the printed reference range and explicit flags. Do not mark every test as NORMAL.
-9. Preserve explicit abnormality flags (e.g. '#', '*', 'H', 'L') in the 'flag' field.
-10. Extract patient metadata separately without combining labels with values.
-11. Return ONLY valid, parseable JSON matching the exact schema below.
+4. OCR Error Correction:
+   - Correct only obvious OCR spelling errors in medical names (e.g. 'roponin-I' -> 'Troponin-I').
+   - Normalize unit formatting ('mg/dl' -> 'mg/dL', 'mmol/1' -> 'mmol/L', '/cu mm' -> '/cu.mm').
+   - Preserve exact reported numeric precision (e.g. '1.30' -> '1.30', '9.81' -> '9.81', '115.5' -> '115.5').
+5. Preserve actual test names (e.g. 'Plasma GLUCOSE- Random (Hexokinase)', 'BUN (Urease/GLDH)').
+6. Determine status ('LOW', 'NORMAL', 'HIGH', 'CRITICAL', 'ABNORMAL', 'UNKNOWN') from the report's printed reference range and explicit flags. Do not mark every test NORMAL.
+7. Preserve explicit abnormality flags (e.g. '#', '*', 'H', 'L') in the 'flag' field.
+8. Extract patient metadata separately without combining field labels (e.g. 'Name : Ria' -> patient_name='Ria', age='').
+9. Return ONLY valid, parseable JSON matching the exact schema below.
 
 SCHEMA:
 {{
@@ -422,7 +665,7 @@ SCHEMA:
 }}
 
 <START_OCR>
-{raw_text[:9000]}
+{raw_text[:12000]}
 <END_OCR>
 """
         messages = [
@@ -439,174 +682,24 @@ SCHEMA:
             if s_idx != -1 and e_idx != -1:
                 parsed = json.loads(resp_str[s_idx:e_idx])
                 if isinstance(parsed, dict) and "tests" in parsed:
-                    # Update validation stats dynamically if not set
-                    t_list = parsed.get("tests", [])
-                    if "validation" not in parsed or not parsed["validation"].get("total_tests"):
-                        high_c = sum(1 for t in t_list if t.get("confidence") == "HIGH")
-                        med_c = sum(1 for t in t_list if t.get("confidence") == "MEDIUM")
-                        low_c = sum(1 for t in t_list if t.get("confidence") == "LOW")
-                        parsed["validation"] = {
-                            "total_tests": len(t_list),
-                            "high_confidence_tests": high_c,
-                            "medium_confidence_tests": med_c,
-                            "low_confidence_tests": low_c,
-                            "excluded_non_test_items": len(parsed.get("excluded_items", [])),
-                            "possible_missing_tests": False,
-                            "notes": f"Extracted {len(t_list)} laboratory tests."
-                        }
-                    return parsed
+                    # Run deterministic validation pass on LLM output
+                    validated = DeterministicMedicalValidator.validate_and_normalize(parsed, full_ocr_text=raw_text)
+                    return validated
         except Exception as e:
-            logger.warning(f"Groq parameter extraction failed ({e}), using robust heuristic parser.")
+            logger.warning(f"Groq parameter extraction failed ({e}), using deterministic candidate extractor.")
 
-        # Heuristic fallback for tabular lab parameters matching the exact schema
-        tests = []
-        excluded_items = []
-        current_section = ""
-        patient_info = {
-            "patient_name": "",
-            "age": "",
-            "sex": "",
-            "registration_no": "",
-            "lab_no": "",
-            "patient_episode": "",
-            "collection_date": "",
-            "receiving_date": "",
-            "reporting_date": "",
-            "referred_by": "",
-            "specimen": ""
-        }
-
-        # Non-test exclusion patterns (DOI, PMID, bibliographies, disclaimers)
-        exclusion_patterns = [
-            (r"(?:doi|PMID|http|www\.)\S+", "Literature identifier / URL"),
-            (r"(?:Biomarker study group|Beckman Coulter|99th percentile|ESC guidelines|Wallach\'s Interpretation)", "Academic literature citation / instrument reference"),
-            (r"(?:eGFR which is primarily based on Serum Creatinine|CKD-EPI 2009)", "Educational formula explanation"),
-            (r"(?:This report is based on the specimen|system generated e-copy)", "Laboratory general disclaimer")
-        ]
-
-        for line in raw_text.split("\n"):
-            line = line.strip()
-            if not line:
-                continue
-
-            # Check section header
-            if any(s in line.upper() for s in ["RENAL PANEL", "BIOCHEMISTRY", "HAEMATOLOGY", "HEMATOLOGY", "COMPLETE BLOOD COUNT", "DIFFERENTIAL COUNT"]):
-                current_section = line.strip(" -:=#")
-                continue
-
-            # Check excluded items
-            for pat, reason in exclusion_patterns:
-                if re.search(pat, line, re.IGNORECASE):
-                    excluded_items.append({"text": line[:80], "reason": reason})
-                    break
-
-            # Extract Patient Metadata
-            if not patient_info["patient_name"]:
-                m_pat = re.search(r"(?:Name|Patient\s*Name)\s*[\:\-]?\s*([A-Za-z\.\s]{3,30})", line, re.IGNORECASE)
-                if m_pat and "HOSPITAL" not in m_pat.group(1).upper() and "DOCTOR" not in m_pat.group(1).upper():
-                    patient_info["patient_name"] = m_pat.group(1).strip()
-
-            if not patient_info["age"]:
-                m_age = re.search(r"\bAge\s*[\:\-]?\s*(\d{1,3}(?:\s*(?:Y|yrs|years))?)", line, re.IGNORECASE)
-                if m_age:
-                    patient_info["age"] = m_age.group(1).strip()
-
-            if not patient_info["specimen"]:
-                m_spec = re.search(r"\bSpecimen\s*[\:\-]?\s*([A-Za-z\s\-\/]+)", line, re.IGNORECASE)
-                if m_spec:
-                    patient_info["specimen"] = m_spec.group(1).strip()
-
-            # Match standard lab report table rows: Name, Result Value, Unit, Reference Range
-            # e.g.: "Plasma GLUCOSE- Random (Hexokinase) 78 mg/dl [70-140]"
-            m_tab = re.search(
-                r"^([A-Za-z\s\-\(\)\/\*]+?)\s+([0-9\.]+)\s*(#|\*)?\s+([a-zA-Z\/\%\<\>\.\-\^0-9]+)\s+(?:\[|\()?([0-9\.\-\<\>\s]+)(?:\]|\))?",
-                line
-            )
-            if m_tab:
-                t_name = m_tab.group(1).strip(" *#-:")
-                val = m_tab.group(2).strip()
-                flag = m_tab.group(3).strip() if m_tab.group(3) else ""
-                unit = m_tab.group(4).strip()
-                ref = m_tab.group(5).strip() if m_tab.group(5) else ""
-
-                # Unit normalizations
-                if unit.lower() in ("mg/dl", "mg/dl."): unit = "mg/dL"
-                elif unit.lower() in ("mmol/1", "mmol/l"): unit = "mmol/L"
-                elif unit.lower() in ("/cumm", "/cu mm"): unit = "/cu.mm"
-
-                # Status calculation
-                status = "NORMAL"
-                if flag == "#" or flag == "*":
-                    status = "ABNORMAL"
-                try:
-                    num_val = float(val)
-                    if "-" in ref:
-                        parts = ref.split("-")
-                        low_b = float(parts[0].strip(" <>=[]()"))
-                        high_b = float(parts[1].strip(" <>=[]()"))
-                        if num_val < low_b:
-                            status = "LOW"
-                        elif num_val > high_b:
-                            status = "HIGH"
-                        else:
-                            status = "NORMAL"
-                    elif "<" in ref:
-                        high_b = float(ref.replace("<", "").strip(" []()"))
-                        status = "HIGH" if num_val > high_b else "NORMAL"
-                    elif ">" in ref:
-                        low_b = float(ref.replace(">", "").strip(" []()"))
-                        status = "LOW" if num_val < low_b else "NORMAL"
-                except Exception:
-                    pass
-
-                if len(t_name) > 2 and not t_name.upper().startswith("PAGE") and not t_name.upper().startswith("END OF"):
-                    tests.append({
-                        "section": current_section,
-                        "test_name": t_name,
-                        "result_value": val,
-                        "unit": unit,
-                        "reference_range": ref,
-                        "status": status,
-                        "flag": flag,
-                        "confidence": "HIGH"
-                    })
-                continue
-
-            # Generic "Test: Value Unit" format
-            m_gen = re.search(r"([A-Za-z\s\-\(\)]+?)[\:\=]\s*([0-9\.\,]+)\s*([a-zA-Z\/\%\<\>]+)?", line)
-            if m_gen:
-                t_name = m_gen.group(1).strip(" *#-:")
-                if len(t_name) > 2 and not t_name.upper().startswith("PAGE") and not t_name.upper().startswith("END OF"):
-                    tests.append({
-                        "section": current_section,
-                        "test_name": t_name,
-                        "result_value": m_gen.group(2).strip(),
-                        "unit": m_gen.group(3).strip() if m_gen.group(3) else "",
-                        "reference_range": "",
-                        "status": "NORMAL",
-                        "flag": "",
-                        "confidence": "HIGH"
-                    })
-
-        return {
+        # Fallback candidate extractor if LLM is unavailable
+        candidate_data = {
             "document_type": document_type,
-            "patient": patient_info,
-            "tests": tests,
+            "patient": {},
+            "tests": [],
             "medications": [],
-            "excluded_items": excluded_items[:10],
-            "validation": {
-                "total_tests": len(tests),
-                "high_confidence_tests": len(tests),
-                "medium_confidence_tests": 0,
-                "low_confidence_tests": 0,
-                "excluded_non_test_items": len(excluded_items),
-                "possible_missing_tests": False,
-                "notes": f"Heuristic parser extracted {len(tests)} laboratory tests."
-            }
+            "excluded_items": []
         }
+        return DeterministicMedicalValidator.validate_and_normalize(candidate_data, full_ocr_text=raw_text)
 
 
-# ── 3. Unified Document Pipeline ──────────────────────────────────────────────
+# ── 4. Unified Document Processing Pipeline ───────────────────────────────────
 
 class DocumentProcessingPipeline:
     @staticmethod
@@ -621,13 +714,13 @@ class DocumentProcessingPipeline:
         doc_id = f"DOC-{uuid.uuid4().hex[:6].upper()}"
         ext = filename.split(".")[-1].lower() if "." in filename else ""
 
-        # Step 1: Run real OCR
+        # Step 1: Run OCR on complete multi-page document
         if ext == "pdf":
             ocr_res = DocumentOCRProvider.extract_from_pdf(file_bytes, filename)
         else:
             ocr_res = DocumentOCRProvider.extract_from_image(file_bytes, filename)
 
-        # Step 2: Extract structured parameters via Groq AI
+        # Step 2: Extract & validate structured parameters via LLM + Deterministic Validator
         structured = StructuredDataExtractor.extract_structured_data(ocr_res.text, document_type)
 
         return {
