@@ -99,3 +99,25 @@ def get_unverified_documents(
         models.Document.verification_required == True,
         models.Document.verified == False
     ).all()
+
+@router.get("/{document_id}/download")
+def download_document_file(
+    document_id: str,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user)
+):
+    from fastapi.responses import FileResponse
+    doc = db.query(models.Document).filter(models.Document.document_id == document_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    if current_user.role == "PATIENT" and current_user.patient_id != doc.patient_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    if not doc.file_reference or not os.path.exists(doc.file_reference):
+        raise HTTPException(status_code=404, detail="Original document file not found on disk")
+
+    log_audit_event(db, user_id=current_user.username, action="DOCUMENT_DOWNLOADED", target_id=document_id)
+    filename = os.path.basename(doc.file_reference)
+    return FileResponse(path=doc.file_reference, filename=filename)
+

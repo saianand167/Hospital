@@ -12,6 +12,13 @@ from app.auth import get_password_hash
 def get_user_by_username(db: Session, username: str) -> Optional[models.User]:
     return db.query(models.User).filter(models.User.username == username).first()
 
+def get_user_by_identifier(db: Session, identifier: str) -> Optional[models.User]:
+    """Retrieve a user by their username or their assigned patient_id."""
+    clean_id = identifier.strip()
+    return db.query(models.User).filter(
+        (models.User.username == clean_id) | (models.User.patient_id == clean_id)
+    ).first()
+
 def create_user(db: Session, username: str, password_raw: str, role: str, patient_id: str = None, doctor_id: str = None, pharmacist_id: str = None) -> models.User:
     hashed_pwd = get_password_hash(password_raw)
     user = models.User(
@@ -193,7 +200,8 @@ def create_or_update_clinical_history(db: Session, history_in: schemas.ClinicalH
     # Check if triage in history_json dictates visit priority
     triage_info = history_in.history_json.get("triage", {})
     prio = triage_info.get("priority")
-    if prio in ["HIGH", "EMERGENCY", "RED"]:
+    flag = triage_info.get("flag")
+    if flag == "RED" or prio in ["HIGH", "EMERGENCY", "RED", True] or prio is True:
         update_visit_status(db, history_in.visit_id, status="WAITING", priority="HIGH")
 
     return ch

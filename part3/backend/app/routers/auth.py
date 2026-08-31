@@ -25,11 +25,11 @@ def login(login_req: schemas.LoginRequest, db: Session = Depends(get_db)):
             detail="Username and password cannot be empty."
         )
 
-    user = crud.get_user_by_username(db, username)
+    user = crud.get_user_by_identifier(db, username)
     if not user or not auth.verify_password(password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password. Please verify your credentials or register a new patient account."
+            detail="Incorrect Patient ID/Username or password. Please verify your credentials or register a new patient account."
         )
     
     access_token = auth.create_access_token(

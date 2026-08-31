@@ -7,7 +7,7 @@ from datetime import datetime
 
 # ── 1. Models ─────────────────────────────────────────────────────────────────
 
-LanguageCode = Literal["en", "te", "hi"]
+LanguageCode = Literal["en", "te", "hi", "or"]
 QuestionType = Literal["yes_no", "single_choice", "multiple_choice", "scale", "number", "text"]
 TriageFlag = Literal["GREEN", "YELLOW", "RED"]
 
@@ -15,6 +15,13 @@ class LocalizedText(BaseModel):
     en: str
     te: Optional[str] = None
     hi: Optional[str] = None
+    or_: Optional[str] = Field(default=None, alias="or")
+
+    def get_for_lang(self, lang: str) -> str:
+        if lang in ("or", "od", "or_"):
+            return self.or_ or self.en
+        val = getattr(self, lang, None)
+        return val or self.en
 
 class OptionChoice(BaseModel):
     value: str
@@ -375,7 +382,7 @@ class ClinicalQuestionEngine:
             if general_questions:
                 q0 = general_questions[0]
                 lang: str = history.language or "en"
-                prompt_text = getattr(q0.question, lang, None) or q0.question.en
+                prompt_text = q0.question.get_for_lang(lang)
                 return QuestionPrompt(
                     field_name=q0.field_name,
                     prompt_text=prompt_text,
@@ -420,11 +427,11 @@ class ClinicalQuestionEngine:
         next_q_def = missing_required[0] if missing_required else missing_questions[0]
 
         lang: str = history.language or "en"
-        prompt_text = getattr(next_q_def.question, lang, None) or next_q_def.question.en
+        prompt_text = next_q_def.question.get_for_lang(lang)
 
         rendered_options = []
         for opt in next_q_def.options:
-            opt_label = getattr(opt.label, lang, None) or opt.label.en
+            opt_label = opt.label.get_for_lang(lang)
             rendered_options.append({
                 "value": opt.value,
                 "label": opt_label
@@ -471,9 +478,15 @@ class RealHistoryEngine:
             ),
             metadata=ClinicalMetadata(completed=False)
         )
+        if initial_complaint:
+            history.triage = RedFlagRuleEngine.evaluate(
+                chief_complaint=history.chief_complaint.canonical or "",
+                hpi=history.hpi,
+                past_history=history.past_history
+            )
         cls._active_sessions[visit_id] = history
         prompt, is_comp = ClinicalQuestionEngine.get_next_question(history)
-        if is_comp:
+        if is_comp or (history.triage.flag == "RED" and history.triage.priority):
             history.metadata.completed = True
         return history, prompt
 

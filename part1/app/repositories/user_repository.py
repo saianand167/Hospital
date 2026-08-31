@@ -42,8 +42,8 @@ class UserRepository:
             cursor.execute("""
                 SELECT user_id, full_name, username, email, password_hash, phone, preferred_language, created_at
                 FROM users
-                WHERE username = ? OR email = ?
-            """, (username_or_email, username_or_email))
+                WHERE username = ? OR email = ? OR user_id = ?
+            """, (username_or_email, username_or_email, username_or_email))
             row = cursor.fetchone()
             if not row:
                 return None

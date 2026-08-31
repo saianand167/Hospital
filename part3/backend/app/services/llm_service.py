@@ -43,10 +43,10 @@ class GrokLLMService:
                 "model": model_name,
                 "messages": messages,
                 "temperature": temperature,
-                "max_tokens": 1200
+                "max_tokens": 800
             }
             try:
-                response = requests.post(url, headers=headers, json=payload, timeout=25)
+                response = requests.post(url, headers=headers, json=payload, timeout=45)
                 if response.status_code == 200:
                     res_json = response.json()
                     return res_json["choices"][0]["message"]["content"].strip()

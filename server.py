@@ -24,5 +24,6 @@ if __name__ == "__main__":
         app_dir=str(BACKEND_DIR),
         host="0.0.0.0",
         port=8000,
-        reload=False
+        reload=False,
+        timeout_keep_alive=120  # Allow long Groq AI calls (doctor summary, RAG) up to 120s
     )

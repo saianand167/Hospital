@@ -57,3 +57,7 @@ htmlcov/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Audio files
+*.mp3
+*.wav

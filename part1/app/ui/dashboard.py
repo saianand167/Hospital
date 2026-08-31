@@ -23,32 +23,84 @@ def render_dashboard():
         </div>
     """, unsafe_allow_html=True)
 
-    # Language Choice Card for New Consultation
+    if "part1_pref_mode" not in st.session_state:
+        st.session_state.part1_pref_mode = "voice"
+    if "part1_pref_lang" not in st.session_state:
+        st.session_state.part1_pref_lang = preferred_lang or "en"
+
+    cur_mode = st.session_state.part1_pref_mode
+    cur_lang = st.session_state.part1_pref_lang
+
+    # Section A: Interaction Mode
     st.markdown("""
-        <div style="background: #ffffff; border: 2px solid #0d9488; border-radius: 18px; padding: 20px; margin-bottom: 20px;">
+        <div style="background: #ffffff; border: 2px solid #0d9488; border-radius: 18px; padding: 20px; margin-bottom: 16px;">
             <div style="font-size: 0.85rem; font-weight: 800; color: #0d9488; text-transform: uppercase;">
-                Step 1: Choose Consultation Language / భాషను ఎంచుకోండి / भाषा चुनें
+                Section A: How would you like to answer? / సమాధాన విధానం
             </div>
             <h3 style="margin: 6px 0 12px 0; color: #0f172a; font-size: 1.25rem; font-weight: 800;">
-                Which language do you want to continue with?
+                Select your interaction method:
             </h3>
         </div>
     """, unsafe_allow_html=True)
 
-    # Big 3-Column Language Launchers
-    col_en, col_te, col_hi = st.columns(3)
+    col_vm, col_tm = st.columns(2)
+    with col_vm:
+        is_vm = cur_mode == "voice"
+        if st.button("🎤 **Voice (Voice AI)**\n\nSpeak answers using microphone" + ("  ✓" if is_vm else ""), key="btn_p1_mode_voice", use_container_width=True):
+            st.session_state.part1_pref_mode = "voice"
+            st.rerun()
+
+    with col_tm:
+        is_tm = cur_mode == "text"
+        if st.button("⌨️ **Text (Typing / Touch)**\n\nType or touch options on screen" + ("  ✓" if is_tm else ""), key="btn_p1_mode_text", use_container_width=True):
+            st.session_state.part1_pref_mode = "text"
+            st.rerun()
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # Section B: Language Choice
+    st.markdown("""
+        <div style="background: #ffffff; border: 2px solid #0d9488; border-radius: 18px; padding: 20px; margin-bottom: 16px;">
+            <div style="font-size: 0.85rem; font-weight: 800; color: #0d9488; text-transform: uppercase;">
+                Section B: Choose Language / భాషను ఎంచుకోండి / ଭାଷା ଚୟନ କରନ୍ତୁ / भाषा चुनें
+            </div>
+            <h3 style="margin: 6px 0 12px 0; color: #0f172a; font-size: 1.25rem; font-weight: 800;">
+                Which language are you comfortable with?
+            </h3>
+        </div>
+    """, unsafe_allow_html=True)
+
+    col_en, col_te, col_or, col_hi = st.columns(4)
 
     with col_en:
-        if st.button("🇬🇧 **English**\n\nStart in English", key="btn_start_en", use_container_width=True):
-            _start_consultation(user_id, "en")
+        is_en = cur_lang == "en"
+        if st.button("🇬🇧 **English**" + ("\n\n✓ Selected" if is_en else "\n\nEnglish"), key="btn_start_en", use_container_width=True):
+            st.session_state.part1_pref_lang = "en"
+            st.rerun()
 
     with col_te:
-        if st.button("🇮🇳 **తెలుగు (Telugu)**\n\nతెలుగులో ప్రారంభించండి", key="btn_start_te", use_container_width=True):
-            _start_consultation(user_id, "te")
+        is_te = cur_lang == "te"
+        if st.button("🇮🇳 **తెలుగు**" + ("\n\n✓ ఎంపికైంది" if is_te else "\n\nTelugu"), key="btn_start_te", use_container_width=True):
+            st.session_state.part1_pref_lang = "te"
+            st.rerun()
+
+    with col_or:
+        is_or = cur_lang == "or"
+        if st.button("🇮🇳 **ଓଡ଼ିଆ**" + ("\n\n✓ ଚୟନିତ" if is_or else "\n\nOdia"), key="btn_start_or", use_container_width=True):
+            st.session_state.part1_pref_lang = "or"
+            st.rerun()
 
     with col_hi:
-        if st.button("🇮🇳 **हिन्दी (Hindi)**\n\nहिन्दी में शुरू करें", key="btn_start_hi", use_container_width=True):
-            _start_consultation(user_id, "hi")
+        is_hi = cur_lang == "hi"
+        if st.button("🇮🇳 **हिन्दी**" + ("\n\n✓ चयनित" if is_hi else "\n\nHindi"), key="btn_start_hi", use_container_width=True):
+            st.session_state.part1_pref_lang = "hi"
+            st.rerun()
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # Continue Button
+    if st.button("🚀 Start Health Interview ➔", key="btn_start_health_intake_p1", use_container_width=True, type="primary"):
+        _start_consultation(user_id, st.session_state.part1_pref_lang, st.session_state.part1_pref_mode)
 
     st.markdown("<br>", unsafe_allow_html=True)
 
@@ -72,11 +124,11 @@ def render_dashboard():
     consultations = ConsultationService.get_user_consultations(user_id)
 
     if not consultations:
-        st.info("No prior consultations found. Select a language above to begin your intake.")
+        st.info("No prior consultations found. Select preferences above to begin your intake.")
     else:
         for c in consultations[:3]:
             flag_color = "#10b981" if c.triage_flag == "GREEN" else "#f59e0b" if c.triage_flag == "YELLOW" else "#e11d48"
-            lang_label = "Telugu (తెలుగు)" if c.language == "te" else "Hindi (हिन्दी)" if c.language == "hi" else "English"
+            lang_label = "Telugu (తెలుగు)" if c.language == "te" else "Odia (ଓଡ଼ିଆ)" if c.language == "or" else "Hindi (हिन्दी)" if c.language == "hi" else "English"
             st.markdown(f"""
                 <div style="background: white; border: 1px solid #e2e8f0; border-radius: 16px; padding: 16px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
                     <div>
@@ -97,12 +149,13 @@ def render_dashboard():
                 </div>
             """, unsafe_allow_html=True)
 
-def _start_consultation(user_id: str, lang: str):
+def _start_consultation(user_id: str, lang: str, mode: str = "voice"):
     history, next_q = HistoryService.start_session(
         user_id=user_id,
         language=lang
     )
     st.session_state.active_visit_id = history.visit_id
+    st.session_state.part1_pref_mode = mode
     st.session_state.current_screen = "active_consultation"
     st.session_state.pending_audio_transcript = None
     st.rerun()

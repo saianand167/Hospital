@@ -18,13 +18,13 @@ def render_login_screen():
     with tab_login:
         st.markdown("##### Sign in to your patient account")
         with st.form("login_form"):
-            username_or_email = st.text_input("Username or Email", placeholder="e.g. sai or sai@example.com")
+            username_or_email = st.text_input("Patient ID / Username / Email", placeholder="e.g. USR-000001, saianand, or sai@example.com")
             password = st.text_input("Password", type="password", placeholder="••••••••")
             submit_login = st.form_submit_button("Sign In ➔", use_container_width=True)
 
             if submit_login:
                 if not username_or_email or not password:
-                    st.error("Please enter both username/email and password.")
+                    st.error("Please enter both Patient ID / Username / Email and Password.")
                 else:
                     user = AuthService.login(UserLogin(username_or_email=username_or_email.strip(), password=password))
                     if user:
@@ -34,7 +34,7 @@ def render_login_screen():
                         st.success(f"Welcome, {user.full_name}!")
                         st.rerun()
                     else:
-                        st.error("Invalid username/email or password.")
+                        st.error("Invalid Patient ID/Username or password.")
 
     with tab_register:
         st.markdown("##### Create a new patient registration")
@@ -52,7 +52,7 @@ def render_login_screen():
             with col_ph:
                 phone = st.text_input("Phone Number (Optional)", placeholder="e.g. 9876543210")
                 
-            pref_lang = st.selectbox("Preferred Language", [("en", "English"), ("te", "తెలుగు (Telugu)"), ("hi", "हिन्दी (Hindi)")], format_func=lambda x: x[1])
+            pref_lang = st.selectbox("Preferred Language", [("en", "English"), ("te", "తెలుగు (Telugu)"), ("or", "ଓଡ଼ିଆ (Odia)"), ("hi", "हिन्दी (Hindi)")], format_func=lambda x: x[1])
             submit_reg = st.form_submit_button("Register Patient Account ➔", use_container_width=True)
 
             if submit_reg:

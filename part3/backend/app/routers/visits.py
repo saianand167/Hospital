@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from typing import Optional
+from pydantic import BaseModel
 from app.database import get_db
 from app import crud, schemas, models, auth
 from app.services.audit_service import log_audit_event
@@ -46,4 +48,18 @@ def complete_visit(
         raise HTTPException(status_code=404, detail="Visit not found")
 
     log_audit_event(db, user_id=current_user.username, action="VISIT_COMPLETED", target_id=visit_id)
+    return visit
+
+@router.post("/{visit_id}/cancel", response_model=schemas.VisitResponse)
+def cancel_visit(
+    visit_id: str,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.RoleChecker(["DOCTOR", "STAFF"]))
+):
+    """Remove a patient from the waiting queue by cancelling the visit."""
+    visit = crud.update_visit_status(db, visit_id, status="CANCELLED")
+    if not visit:
+        raise HTTPException(status_code=404, detail="Visit not found")
+
+    log_audit_event(db, user_id=current_user.username, action="VISIT_CANCELLED", target_id=visit_id)
     return visit
