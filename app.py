@@ -708,7 +708,19 @@ def render_patient_portal():
                 if res:
                     st.success(f"✓ Processed Document: `{res['document_id']}`")
                     st.write(f"**Confidence:** `{res['ocr_confidence']*100:.1f}%`")
-                    st.json(res.get("structured_data", {}))
+                    st_data = res.get("structured_data", {})
+                    t_list = st_data.get("tests", [])
+                    if t_list:
+                        abnormal_count = sum(1 for t in t_list if t.get("status") in ("HIGH", "LOW", "ABNORMAL", "CRITICAL") or t.get("flag") in ("#", "*", "H", "L"))
+                        st.markdown(f"""
+                        <div style="background:rgba(14,165,233,0.1); border:1px solid #0EA5E9; border-radius:8px; padding:10px; margin-bottom:12px;">
+                            <b>🧪 Total Tests Extracted:</b> {len(t_list)} | 
+                            <b>⚠️ Flagged/Abnormal:</b> <span style="color:{'#EF4444' if abnormal_count > 0 else '#10B981'}; font-weight:700;">{abnormal_count}</span>
+                        </div>
+                        """, unsafe_allow_html=True)
+                        st.dataframe(t_list, use_container_width=True)
+                    with st.expander("🔍 View Raw JSON Structured Output", expanded=True):
+                        st.json(st_data)
                 else:
                     st.error(f"❌ {err}")
 

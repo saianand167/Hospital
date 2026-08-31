@@ -317,57 +317,116 @@ class DocumentOCRProvider:
 class StructuredDataExtractor:
     @staticmethod
     def extract_structured_data(raw_text: str, document_type: str) -> Dict[str, Any]:
-        """Convert extracted real OCR text into structured JSON parameters via Groq AI."""
-        if not raw_text or len(raw_text.strip()) < 10:
-            return {
-                "document_type": document_type,
+        """Convert extracted real OCR text into structured JSON parameters via Groq AI with strict clinical validation."""
+        empty_result = {
+            "document_type": document_type,
+            "patient": {
                 "patient_name": "",
-                "report_date": "",
-                "tests": [],
-                "medications": [],
-                "impression": "",
-                "note": "No text extracted from document"
+                "age": "",
+                "sex": "",
+                "registration_no": "",
+                "lab_no": "",
+                "patient_episode": "",
+                "collection_date": "",
+                "receiving_date": "",
+                "reporting_date": "",
+                "referred_by": "",
+                "specimen": ""
+            },
+            "tests": [],
+            "medications": [],
+            "excluded_items": [],
+            "validation": {
+                "total_tests": 0,
+                "high_confidence_tests": 0,
+                "medium_confidence_tests": 0,
+                "low_confidence_tests": 0,
+                "excluded_non_test_items": 0,
+                "possible_missing_tests": False,
+                "notes": "No text extracted from document."
             }
+        }
 
-        prompt = f"""You are an expert clinical laboratory and medical document parameter extraction engine.
-DOCUMENT TYPE: {document_type}
-RAW OCR EXTRACTED TEXT:
-\"\"\"
-{raw_text[:8000]}
-\"\"\"
+        if not raw_text or len(raw_text.strip()) < 10:
+            return empty_result
 
-CRITICAL INSTRUCTIONS:
-1. Extract ALL clinical laboratory tests, investigations, panel values, units, reference ranges, and abnormal status (HIGH, LOW, NORMAL) mentioned in the text.
-2. If it's a LAB_REPORT (Biochemistry, Haematology, CBC, LFT, KFT, Renal Panel, Cardiac, etc.):
-   - Populate "tests" with an array of objects:
-     [{{"test_name": "Name of test/panel", "result_value": "numeric or text value", "unit": "mg/dl or mmol/l or /cu.mm etc", "reference_range": "e.g. 70-140", "status": "HIGH/LOW/NORMAL"}}]
-3. If it's a PRESCRIPTION, populate "medications":
-     [{{"medicine_name": "...", "dose": "...", "frequency": "...", "duration": "...", "instructions": "..."}}]
-4. Extract patient_name, doctor_name, report_date, lab_no, and impression/summary if present.
-5. Return ONLY valid, parseable JSON with no markdown backticks and no conversational filler.
+        prompt = f"""You are an expert medical laboratory report OCR extraction and validation engine.
 
-Schema:
+Your task is to convert the COMPLETE OCR TEXT provided at the bottom into accurate, structured JSON.
+
+IMPORTANT:
+1. Extract information from ALL pages of the OCR TEXT across all sections. Do not stop after finding the first few tests.
+2. Accuracy is more important than completeness by guessing. Never invent, estimate, or hallucinate information.
+3. The OCR TEXT is the only source of truth.
+4. Extract ONLY genuine PATIENT LABORATORY TEST RESULTS.
+   A genuine test result normally contains: TEST NAME + PATIENT RESULT + UNIT and/or REFERENCE RANGE.
+5. NEVER EXTRACT THESE AS TESTS (add to excluded_items instead):
+   - DOI, PMID, journal citations, bibliography, research papers, study authors, publication information
+   - Methodology descriptions, analyzer/instrument descriptions, educational text, disclaimers, comments, notes
+   - 99th percentile text unless explicitly the patient's individual measurement
+   - Isolated numbers, dates, registration numbers, page headers/footers
+6. OCR Error Correction:
+   - Correct only obvious OCR errors when strongly supported by surrounding medical context (e.g. 'roponin-I' -> 'Troponin-I').
+   - Normalize obvious unit formatting ('mg/dl' -> 'mg/dL', 'mmol/1' -> 'mmol/L', '/cu mm' -> '/cu.mm').
+   - Preserve reported decimal precision exactly as reported (e.g. '1.30' -> '1.30', '9.81' -> '9.81').
+7. Preserve actual test names (e.g. 'Plasma GLUCOSE- Random (Hexokinase)', 'BUN (Urease/GLDH)').
+8. Determine status ('LOW', 'NORMAL', 'HIGH', 'CRITICAL', 'ABNORMAL', 'UNKNOWN') using the printed reference range and explicit flags. Do not mark every test as NORMAL.
+9. Preserve explicit abnormality flags (e.g. '#', '*', 'H', 'L') in the 'flag' field.
+10. Extract patient metadata separately without combining labels with values.
+11. Return ONLY valid, parseable JSON matching the exact schema below.
+
+SCHEMA:
 {{
   "document_type": "{document_type}",
-  "patient_name": "...",
-  "report_date": "...",
-  "doctor_name": "...",
-  "lab_no": "...",
+  "patient": {{
+    "patient_name": "",
+    "age": "",
+    "sex": "",
+    "registration_no": "",
+    "lab_no": "",
+    "patient_episode": "",
+    "collection_date": "",
+    "receiving_date": "",
+    "reporting_date": "",
+    "referred_by": "",
+    "specimen": ""
+  }},
   "tests": [
     {{
-      "test_name": "...",
-      "result_value": "...",
-      "unit": "...",
-      "reference_range": "...",
-      "status": "NORMAL"
+      "section": "",
+      "test_name": "",
+      "result_value": "",
+      "unit": "",
+      "reference_range": "",
+      "status": "",
+      "flag": "",
+      "confidence": "HIGH"
     }}
   ],
   "medications": [],
-  "impression": "..."
+  "excluded_items": [
+    {{
+      "text": "",
+      "reason": ""
+    }}
+  ],
+  "validation": {{
+    "total_tests": 0,
+    "high_confidence_tests": 0,
+    "medium_confidence_tests": 0,
+    "low_confidence_tests": 0,
+    "excluded_non_test_items": 0,
+    "possible_missing_tests": false,
+    "notes": ""
+  }}
 }}
+
+<START_OCR>
+{raw_text[:9000]}
+<END_OCR>
 """
         messages = [
-            {"role": "system", "content": "You are a clinical parameter extractor. Return structured JSON only without markdown formatting."},
+            {"role": "system", "content": "You are a clinical laboratory OCR validation and structured data extraction engine. Return ONLY the JSON object."},
             {"role": "user", "content": prompt}
         ]
 
@@ -379,36 +438,86 @@ Schema:
             e_idx = resp_str.rfind("}") + 1
             if s_idx != -1 and e_idx != -1:
                 parsed = json.loads(resp_str[s_idx:e_idx])
-                if isinstance(parsed, dict) and ("tests" in parsed or "medications" in parsed):
+                if isinstance(parsed, dict) and "tests" in parsed:
+                    # Update validation stats dynamically if not set
+                    t_list = parsed.get("tests", [])
+                    if "validation" not in parsed or not parsed["validation"].get("total_tests"):
+                        high_c = sum(1 for t in t_list if t.get("confidence") == "HIGH")
+                        med_c = sum(1 for t in t_list if t.get("confidence") == "MEDIUM")
+                        low_c = sum(1 for t in t_list if t.get("confidence") == "LOW")
+                        parsed["validation"] = {
+                            "total_tests": len(t_list),
+                            "high_confidence_tests": high_c,
+                            "medium_confidence_tests": med_c,
+                            "low_confidence_tests": low_c,
+                            "excluded_non_test_items": len(parsed.get("excluded_items", [])),
+                            "possible_missing_tests": False,
+                            "notes": f"Extracted {len(t_list)} laboratory tests."
+                        }
                     return parsed
         except Exception as e:
             logger.warning(f"Groq parameter extraction failed ({e}), using robust heuristic parser.")
 
-        # Heuristic fallback for tabular lab parameters
+        # Heuristic fallback for tabular lab parameters matching the exact schema
         tests = []
-        patient_name = ""
-        report_date = ""
+        excluded_items = []
+        current_section = ""
+        patient_info = {
+            "patient_name": "",
+            "age": "",
+            "sex": "",
+            "registration_no": "",
+            "lab_no": "",
+            "patient_episode": "",
+            "collection_date": "",
+            "receiving_date": "",
+            "reporting_date": "",
+            "referred_by": "",
+            "specimen": ""
+        }
+
+        # Non-test exclusion patterns (DOI, PMID, bibliographies, disclaimers)
+        exclusion_patterns = [
+            (r"(?:doi|PMID|http|www\.)\S+", "Literature identifier / URL"),
+            (r"(?:Biomarker study group|Beckman Coulter|99th percentile|ESC guidelines|Wallach\'s Interpretation)", "Academic literature citation / instrument reference"),
+            (r"(?:eGFR which is primarily based on Serum Creatinine|CKD-EPI 2009)", "Educational formula explanation"),
+            (r"(?:This report is based on the specimen|system generated e-copy)", "Laboratory general disclaimer")
+        ]
 
         for line in raw_text.split("\n"):
             line = line.strip()
             if not line:
                 continue
 
-            # Extract Patient Name
-            if not patient_name:
+            # Check section header
+            if any(s in line.upper() for s in ["RENAL PANEL", "BIOCHEMISTRY", "HAEMATOLOGY", "HEMATOLOGY", "COMPLETE BLOOD COUNT", "DIFFERENTIAL COUNT"]):
+                current_section = line.strip(" -:=#")
+                continue
+
+            # Check excluded items
+            for pat, reason in exclusion_patterns:
+                if re.search(pat, line, re.IGNORECASE):
+                    excluded_items.append({"text": line[:80], "reason": reason})
+                    break
+
+            # Extract Patient Metadata
+            if not patient_info["patient_name"]:
                 m_pat = re.search(r"(?:Name|Patient\s*Name)\s*[\:\-]?\s*([A-Za-z\.\s]{3,30})", line, re.IGNORECASE)
                 if m_pat and "HOSPITAL" not in m_pat.group(1).upper() and "DOCTOR" not in m_pat.group(1).upper():
-                    patient_name = m_pat.group(1).strip()
+                    patient_info["patient_name"] = m_pat.group(1).strip()
 
-            # Extract Date
-            if not report_date:
-                m_date = re.search(r"(?:Date|Reporting\s*Date|Collection\s*Date)\s*[\:\-]?\s*([0-9\/\-\.]{8,12})", line, re.IGNORECASE)
-                if m_date:
-                    report_date = m_date.group(1).strip()
+            if not patient_info["age"]:
+                m_age = re.search(r"\bAge\s*[\:\-]?\s*(\d{1,3}(?:\s*(?:Y|yrs|years))?)", line, re.IGNORECASE)
+                if m_age:
+                    patient_info["age"] = m_age.group(1).strip()
+
+            if not patient_info["specimen"]:
+                m_spec = re.search(r"\bSpecimen\s*[\:\-]?\s*([A-Za-z\s\-\/]+)", line, re.IGNORECASE)
+                if m_spec:
+                    patient_info["specimen"] = m_spec.group(1).strip()
 
             # Match standard lab report table rows: Name, Result Value, Unit, Reference Range
             # e.g.: "Plasma GLUCOSE- Random (Hexokinase) 78 mg/dl [70-140]"
-            # e.g.: "Haemoglobin (Photometric) 15.1 g/dl [13.0-17.0]"
             m_tab = re.search(
                 r"^([A-Za-z\s\-\(\)\/\*]+?)\s+([0-9\.]+)\s*(#|\*)?\s+([a-zA-Z\/\%\<\>\.\-\^0-9]+)\s+(?:\[|\()?([0-9\.\-\<\>\s]+)(?:\]|\))?",
                 line
@@ -416,15 +525,50 @@ Schema:
             if m_tab:
                 t_name = m_tab.group(1).strip(" *#-:")
                 val = m_tab.group(2).strip()
+                flag = m_tab.group(3).strip() if m_tab.group(3) else ""
                 unit = m_tab.group(4).strip()
                 ref = m_tab.group(5).strip() if m_tab.group(5) else ""
-                if len(t_name) > 2 and not t_name.upper().startswith("PAGE"):
+
+                # Unit normalizations
+                if unit.lower() in ("mg/dl", "mg/dl."): unit = "mg/dL"
+                elif unit.lower() in ("mmol/1", "mmol/l"): unit = "mmol/L"
+                elif unit.lower() in ("/cumm", "/cu mm"): unit = "/cu.mm"
+
+                # Status calculation
+                status = "NORMAL"
+                if flag == "#" or flag == "*":
+                    status = "ABNORMAL"
+                try:
+                    num_val = float(val)
+                    if "-" in ref:
+                        parts = ref.split("-")
+                        low_b = float(parts[0].strip(" <>=[]()"))
+                        high_b = float(parts[1].strip(" <>=[]()"))
+                        if num_val < low_b:
+                            status = "LOW"
+                        elif num_val > high_b:
+                            status = "HIGH"
+                        else:
+                            status = "NORMAL"
+                    elif "<" in ref:
+                        high_b = float(ref.replace("<", "").strip(" []()"))
+                        status = "HIGH" if num_val > high_b else "NORMAL"
+                    elif ">" in ref:
+                        low_b = float(ref.replace(">", "").strip(" []()"))
+                        status = "LOW" if num_val < low_b else "NORMAL"
+                except Exception:
+                    pass
+
+                if len(t_name) > 2 and not t_name.upper().startswith("PAGE") and not t_name.upper().startswith("END OF"):
                     tests.append({
+                        "section": current_section,
                         "test_name": t_name,
                         "result_value": val,
                         "unit": unit,
                         "reference_range": ref,
-                        "status": "NORMAL"
+                        "status": status,
+                        "flag": flag,
+                        "confidence": "HIGH"
                     })
                 continue
 
@@ -432,23 +576,33 @@ Schema:
             m_gen = re.search(r"([A-Za-z\s\-\(\)]+?)[\:\=]\s*([0-9\.\,]+)\s*([a-zA-Z\/\%\<\>]+)?", line)
             if m_gen:
                 t_name = m_gen.group(1).strip(" *#-:")
-                if len(t_name) > 2 and not t_name.upper().startswith("PAGE"):
+                if len(t_name) > 2 and not t_name.upper().startswith("PAGE") and not t_name.upper().startswith("END OF"):
                     tests.append({
+                        "section": current_section,
                         "test_name": t_name,
                         "result_value": m_gen.group(2).strip(),
                         "unit": m_gen.group(3).strip() if m_gen.group(3) else "",
                         "reference_range": "",
-                        "status": "NORMAL"
+                        "status": "NORMAL",
+                        "flag": "",
+                        "confidence": "HIGH"
                     })
 
         return {
             "document_type": document_type,
-            "patient_name": patient_name,
-            "report_date": report_date,
+            "patient": patient_info,
             "tests": tests,
             "medications": [],
-            "impression": f"Extracted {len(tests)} test parameters from medical report.",
-            "raw_snippet": raw_text[:300]
+            "excluded_items": excluded_items[:10],
+            "validation": {
+                "total_tests": len(tests),
+                "high_confidence_tests": len(tests),
+                "medium_confidence_tests": 0,
+                "low_confidence_tests": 0,
+                "excluded_non_test_items": len(excluded_items),
+                "possible_missing_tests": False,
+                "notes": f"Heuristic parser extracted {len(tests)} laboratory tests."
+            }
         }
 
 
