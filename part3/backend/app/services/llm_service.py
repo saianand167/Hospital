@@ -32,20 +32,36 @@ class GrokLLMService:
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
         }
-        payload = {
-            "model": self.model,
-            "messages": messages,
-            "temperature": temperature,
-            "max_tokens": 1200
-        }
 
-        response = requests.post(url, headers=headers, json=payload, timeout=30)
-        if response.status_code == 200:
-            res_json = response.json()
-            return res_json["choices"][0]["message"]["content"].strip()
-        else:
-            logger.error(f"Groq API error {response.status_code}: {response.text}")
-            raise Exception(f"Groq API returned status {response.status_code}: {response.text[:200]}")
+        candidate_models = [self.model, "openai/gpt-oss-20b", "qwen/qwen3.8-27b", "groq/compound"]
+        last_err = None
+
+        for model_name in candidate_models:
+            if not model_name:
+                continue
+            payload = {
+                "model": model_name,
+                "messages": messages,
+                "temperature": temperature,
+                "max_tokens": 1200
+            }
+            try:
+                response = requests.post(url, headers=headers, json=payload, timeout=25)
+                if response.status_code == 200:
+                    res_json = response.json()
+                    return res_json["choices"][0]["message"]["content"].strip()
+                elif response.status_code == 429:
+                    logger.warning(f"Groq model '{model_name}' hit rate limit (429), trying next fallback model...")
+                    last_err = f"Rate limited on {model_name}"
+                    continue
+                else:
+                    logger.warning(f"Groq API error with model '{model_name}': {response.text[:200]}")
+                    last_err = response.text[:200]
+            except Exception as e:
+                logger.warning(f"Groq request exception on '{model_name}': {e}")
+                last_err = str(e)
+
+        raise Exception(f"All Groq models failed. Last error: {last_err}")
 
     def generate_doctor_summary(
         self,
